@@ -1,0 +1,47 @@
+<Project>
+
+  <!--
+    Propiedades comunes a TODOS los proyectos de la solucion.
+    MSBuild importa este fichero automaticamente en cada .csproj que este por debajo
+    de esta carpeta, asi que no hay que repetir estas lineas en cada proyecto.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+
+    <!-- Tipos de referencia nulables: el compilador avisa si algo puede ser null sin declararlo. -->
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <!-- Las advertencias se tratan como errores: nada de codigo que compila "con avisos". -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+
+    <!-- El codigo, los comentarios y los mensajes del proyecto estan en espanol. -->
+    <NeutralLanguage>es</NeutralLanguage>
+    <InvariantGlobalization>false</InvariantGlobalization>
+
+    <!--
+      Documentacion XML obligatoria.
+      GenerateDocumentationFile genera el fichero .xml con los comentarios ///.
+      Al NO silenciar CS1591 y estar activo TreatWarningsAsErrors, el proyecto
+      NO COMPILA si un miembro publico se queda sin su comentario /// en espanol.
+      Es la forma de garantizar que la documentacion no se quede atras.
+    -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <Company>Rumbo</Company>
+    <Product>Rumbo</Product>
+    <Authors>Rumbo</Authors>
+  </PropertyGroup>
+
+  <!--
+    Excepcion para los proyectos de pruebas: no exigimos comentario XML en cada
+    metodo [Fact], porque el nombre del test ya describe lo que verifica.
+  -->
+  <PropertyGroup Condition="$(MSBuildProjectDirectory.Contains('pruebas'))">
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+</Project>

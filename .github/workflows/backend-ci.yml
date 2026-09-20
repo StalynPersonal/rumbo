@@ -1,0 +1,40 @@
+# Integracion continua del backend.
+# Compila la solucion y ejecuta las pruebas en cada push y en cada pull request.
+# El despliegue a Azure se anade en la Fase 10, en un workflow aparte.
+name: Backend CI
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  compilar-y-probar:
+    name: Compilar y probar
+    runs-on: windows-latest
+
+    steps:
+      - name: Descargar el codigo
+        uses: actions/checkout@v4
+
+      - name: Instalar el SDK de .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restaurar paquetes
+        run: dotnet restore Rumbo.slnx
+
+      - name: Compilar
+        # Sin restore porque ya se hizo. Cualquier advertencia es error (Directory.Build.props).
+        run: dotnet build Rumbo.slnx --configuration Release --no-restore
+
+      - name: Ejecutar pruebas
+        # Incluye las pruebas de arquitectura y, desde la Fase 3, las de aislamiento
+        # entre espacios. Si esas fallan, no se despliega.
+        run: dotnet test Rumbo.slnx --configuration Release --no-build --verbosity normal

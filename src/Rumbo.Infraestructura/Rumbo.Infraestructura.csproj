@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    INFRAESTRUCTURA: implementaciones concretas de lo que la Aplicacion declara como interfaz
+    (base de datos con EF Core, envio de correo, tokens JWT, tasas de cambio...).
+  -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\Rumbo.Dominio\Rumbo.Dominio.csproj" />
+    <ProjectReference Include="..\Rumbo.Aplicacion\Rumbo.Aplicacion.csproj" />
+  </ItemGroup>
+
+</Project>

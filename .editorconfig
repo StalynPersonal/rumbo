@@ -1,0 +1,57 @@
+# Estilo de codigo de Rumbo. Lo aplican Visual Studio, Rider, VS Code y "dotnet format".
+root = true
+
+[*]
+charset = utf-8
+end_of_line = crlf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.{json,yml,yaml,xml,csproj,props,targets,slnx}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
+
+[*.cs]
+# --- Organizacion de los using ---
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = true
+csharp_using_directive_placement = outside_namespace:warning
+
+# --- Estilo moderno de C# que usamos en todo el proyecto ---
+csharp_style_namespace_declarations = file_scoped:warning
+csharp_style_var_for_built_in_types = false:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_prefer_braces = true:warning
+csharp_style_prefer_primary_constructors = true:suggestion
+dotnet_style_require_accessibility_modifiers = for_non_interface_members:warning
+dotnet_style_readonly_field = true:warning
+
+# --- Nomenclatura: TODO en espanol, sin tildes ni enie (ver docs/GLOSARIO.md) ---
+dotnet_naming_rule.interfaces_empiezan_con_i.severity = warning
+dotnet_naming_rule.interfaces_empiezan_con_i.symbols = interfaz
+dotnet_naming_rule.interfaces_empiezan_con_i.style = prefijo_i
+dotnet_naming_symbols.interfaz.applicable_kinds = interface
+dotnet_naming_style.prefijo_i.required_prefix = I
+dotnet_naming_style.prefijo_i.capitalization = pascal_case
+
+dotnet_naming_rule.miembros_publicos_en_pascal.severity = warning
+dotnet_naming_rule.miembros_publicos_en_pascal.symbols = miembro_publico
+dotnet_naming_rule.miembros_publicos_en_pascal.style = pascal
+dotnet_naming_symbols.miembro_publico.applicable_kinds = class,struct,enum,property,method,event,delegate
+dotnet_naming_symbols.miembro_publico.applicable_accessibilities = public,internal,protected
+dotnet_naming_style.pascal.capitalization = pascal_case
+
+dotnet_naming_rule.campos_privados_con_guion_bajo.severity = warning
+dotnet_naming_rule.campos_privados_con_guion_bajo.symbols = campo_privado
+dotnet_naming_rule.campos_privados_con_guion_bajo.style = guion_bajo_camel
+dotnet_naming_symbols.campo_privado.applicable_kinds = field
+dotnet_naming_symbols.campo_privado.applicable_accessibilities = private
+dotnet_naming_style.guion_bajo_camel.required_prefix = _
+dotnet_naming_style.guion_bajo_camel.capitalization = camel_case
+
+# --- Avisos que NO queremos como error (recordar: TreatWarningsAsErrors esta activo) ---
+dotnet_diagnostic.CA1861.severity = suggestion

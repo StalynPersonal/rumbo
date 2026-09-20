@@ -1,0 +1,45 @@
+## Compilacion de .NET
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+artifacts/
+*.user
+*.suo
+*.userprefs
+
+## Visual Studio / Rider / VS Code
+.vs/
+.idea/
+.vscode/
+*.sln.docstates
+
+## Resultados de pruebas y cobertura
+[Tt]est[Rr]esult*/
+coverage*.json
+coverage*.xml
+coverage*.info
+*.coverage
+
+## Secretos y configuracion local
+## Las claves (SMTP, JWT, cadenas de conexion) van en user-secrets o Key Vault,
+## NUNCA en un fichero versionado.
+appsettings.Local.json
+appsettings.*.Local.json
+*.pfx
+*.p12
+secrets.json
+.env
+
+## .NET MAUI / Android (Fase 8)
+*.keystore
+*.jks
+*.apk
+*.aab
+[Pp]ublish/
+*.binlog
+
+## Sistema operativo
+Thumbs.db
+desktop.ini
+.DS_Store

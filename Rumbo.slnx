@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/pruebas/">
+    <Project Path="pruebas/Rumbo.PruebasArquitectura/Rumbo.PruebasArquitectura.csproj" />
+    <Project Path="pruebas/Rumbo.PruebasIntegracion/Rumbo.PruebasIntegracion.csproj" />
+    <Project Path="pruebas/Rumbo.PruebasUnitarias/Rumbo.PruebasUnitarias.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Rumbo.Api/Rumbo.Api.csproj" />
+    <Project Path="src/Rumbo.Aplicacion/Rumbo.Aplicacion.csproj" />
+    <Project Path="src/Rumbo.Contratos/Rumbo.Contratos.csproj" />
+    <Project Path="src/Rumbo.Dominio/Rumbo.Dominio.csproj" />
+    <Project Path="src/Rumbo.Infraestructura/Rumbo.Infraestructura.csproj" />
+  </Folder>
+</Solution>

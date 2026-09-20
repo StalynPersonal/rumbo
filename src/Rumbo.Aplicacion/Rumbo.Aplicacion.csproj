@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Capa de APLICACION: casos de uso, servicios por modulo, validaciones y calculadoras.
+    Depende del Dominio y de los Contratos. No sabe nada de EF Core ni de HTTP.
+  -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\Rumbo.Dominio\Rumbo.Dominio.csproj" />
+    <ProjectReference Include="..\Rumbo.Contratos\Rumbo.Contratos.csproj" />
+  </ItemGroup>
+
+</Project>

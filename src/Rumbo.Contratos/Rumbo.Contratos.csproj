@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    CONTRATOS: los DTOs que viajan entre la API y la app movil.
+    Sin dependencias, para que la app MAUI pueda referenciarlo
+    sin arrastrar EF Core ni ASP.NET Core dentro del APK.
+  -->
+
+</Project>

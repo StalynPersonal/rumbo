@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Capa de DOMINIO. Es el corazon del sistema: entidades, enums e invariantes.
+    Regla estricta: este proyecto NO referencia a ningun otro proyecto ni a ningun
+    paquete de infraestructura (nada de EF Core, ASP.NET Core ni bases de datos).
+  -->
+
+</Project>
