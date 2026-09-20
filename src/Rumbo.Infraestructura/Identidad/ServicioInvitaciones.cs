@@ -58,6 +58,13 @@ public partial class ServicioInvitaciones(
     /// </remarks>
     private const int MaximoPendientesPorEspacio = 20;
 
+    /// <summary>Maximo de invitaciones que un espacio puede crear en una hora.</summary>
+    /// <remarks>
+    /// Acota cuantos correos salen de nuestro servidor SMTP. Un hogar real invita a dos o
+    /// tres personas en toda su vida; diez en una hora ya es claramente anomalo.
+    /// </remarks>
+    private const int MaximoPorHoraPorEspacio = 10;
+
     private readonly OpcionesCorreo _correo = opcionesCorreo.Value;
 
     /// <inheritdoc />

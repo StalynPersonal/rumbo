@@ -85,9 +85,10 @@ public partial class ServicioConfiguracionCorreo(
     /// </remarks>
     private static void Validar(SolicitudGuardarCorreo solicitud)
     {
-        if (solicitud.Puerto is < 1 or > 65535)
+        if (!PuertosSmtpPermitidos.Contains(solicitud.Puerto))
         {
-            throw new ExcepcionDominio("El puerto debe estar entre 1 y 65535.");
+            throw new ExcepcionDominio(
+                "El puerto debe ser uno de los de SMTP: 25, 465, 587 o 2525.");
         }
 
         if (!solicitud.Activa)
@@ -111,6 +112,75 @@ public partial class ServicioConfiguracionCorreo(
         {
             throw new ExcepcionDominio("La dirección del remitente no tiene un formato válido.");
         }
+
+        VerificarQueElHostNoEsInterno(solicitud.Host!);
+    }
+
+    /// <summary>Puertos que se aceptan como servidor de correo.</summary>
+    /// <remarks>
+    /// El host y el puerto los elige quien configura el espacio, y el servidor se conecta a
+    /// donde le digan. Sin esta lista, el campo se podria usar para sondear que hay
+    /// escuchando en la red interna midiendo cuanto tarda en fallar cada intento.
+    /// </remarks>
+    private static readonly int[] PuertosSmtpPermitidos = [25, 465, 587, 2525];
+
+    /// <summary>Rechaza servidores que apunten a la propia red.</summary>
+    /// <param name="host">Servidor indicado.</param>
+    /// <remarks>
+    /// <para>
+    /// Un servidor de correo legitimo nunca es «localhost» ni una direccion privada. Apuntar
+    /// ahi solo sirve para que la aplicacion hable con algo que esta detras del cortafuegos
+    /// en nombre de quien configura el espacio.
+    /// </para>
+    /// <para>
+    /// <b>No se resuelve el nombre por DNS a proposito.</b> Un nombre puede resolver a una
+    /// direccion publica al guardarlo y a una interna al usarlo, asi que comprobarlo aqui
+    /// daria una falsa sensacion de seguridad a cambio de una llamada de red en cada
+    /// guardado. Esto filtra lo evidente; el aislamiento de red de Azure hace el resto.
+    /// </para>
+    /// </remarks>
+    private static void VerificarQueElHostNoEsInterno(string host)
+    {
+        var limpio = host.Trim();
+
+        if (limpio.Equals("localhost", StringComparison.OrdinalIgnoreCase)
+            || limpio.EndsWith(".localhost", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ExcepcionDominio(
+                "El servidor SMTP no puede apuntar a la propia máquina.");
+        }
+
+        if (System.Net.IPAddress.TryParse(limpio, out var direccion)
+            && (System.Net.IPAddress.IsLoopback(direccion) || EsPrivada(direccion)))
+        {
+            throw new ExcepcionDominio(
+                "El servidor SMTP no puede ser una dirección de la red interna.");
+        }
+    }
+
+    /// <summary>Indica si una direccion pertenece a un rango privado.</summary>
+    /// <param name="direccion">Direccion analizada.</param>
+    /// <returns><c>true</c> si es privada o de enlace local.</returns>
+    private static bool EsPrivada(System.Net.IPAddress direccion)
+    {
+        if (direccion.AddressFamily != System.Net.Sockets.AddressFamily.InterNetwork)
+        {
+            // IPv6: se rechazan las de enlace local y las unicas locales (fc00::/7).
+            return direccion.IsIPv6LinkLocal
+                   || direccion.GetAddressBytes()[0] is >= 0xFC and <= 0xFD;
+        }
+
+        var octetos = direccion.GetAddressBytes();
+
+        return octetos[0] switch
+        {
+            10 => true,
+            127 => true,
+            172 => octetos[1] is >= 16 and <= 31,
+            192 => octetos[1] == 168,
+            169 => octetos[1] == 254,
+            _ => false,
+        };
     }
 
     /// <summary>Vuelca la solicitud sobre la entidad, cifrando la contrasena.</summary>

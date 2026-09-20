@@ -216,27 +216,139 @@ devuelve un mensaje genérico y el detalle queda solo en los registros del servi
 Las excepciones de dominio sí muestran su mensaje, porque están escritas para que las lea la
 persona: «El código de invitación ha caducado».
 
-## 9. Cobertura de pruebas de seguridad
+## 9. Límite de peticiones
 
-De las 72 pruebas automáticas, estas verifican seguridad directamente:
+Implementado en la Fase 9. Un **limitador global que decide por ruta**, no políticas sueltas
+endpoint a endpoint.
+
+| Ámbito | Cupo | Por qué |
+|---|---|---|
+| `/api/v1/autenticacion/*` | 5 por minuto | Frena probar contraseñas en serie y el abuso de «olvidé mi clave» para bombardear a alguien con correos |
+| Resto de `/api/*` | 100 por minuto | Uso normal holgado; corta el raspado masivo |
+| `/salud` y Swagger | Sin límite | Azure consulta `/salud` cada pocos segundos; si se cortara, la plataforma creería que la API está caída y la reiniciaría |
+
+El cupo se reparte **por usuario** cuando hay sesión y **por dirección IP** cuando no la hay. El
+identificador de usuario sale del token ya validado, nunca de una cabecera: si se tomara de algo
+que el cliente controla, bastaría con cambiarlo en cada petición para saltarse el límite.
+
+El rechazo es `429` con `Retry-After` y cuerpo `ProblemDetails`, igual que cualquier otro error
+de la API. Sin esa cabecera, un cliente honesto solo puede reintentar a ciegas, que es justo lo
+que empeora la situación.
+
+> **Por qué un limitador global y no atributos.** La primera versión usaba
+> `[EnableRateLimiting]` en el controlador de autenticación más `RequireRateLimiting` en bloque
+> sobre todos los controladores. El segundo **pisaba** al primero y el límite estricto se perdía
+> sin que nada avisara. Lo detectó la prueba, no la revisión de código. Con un único limitador
+> que mira la ruta, el reparto está en un sitio y se lee de un vistazo.
+
+**Esto es una capa más, no la única.** Una dirección IP se cambia. Detrás siguen estando el
+bloqueo de cuenta por intentos, las claves hasheadas y el registro cerrado por invitación.
+
+### Límite de invitaciones
+
+Dos topes, y hacen falta los dos:
+
+- **20 invitaciones pendientes** por espacio: acota cuántas puertas quedan abiertas a la vez.
+- **10 invitaciones por hora** por espacio: acota cuántos correos salen del servidor SMTP.
+
+Sin el segundo, bastaría con anular las veinte pendientes y volver a crearlas en bucle para
+mandar correo sin tope y arruinar la reputación del dominio remitente. Se cuentan **todas** las
+creadas en la última hora, sea cual sea su estado: anular una invitación no deshace el correo
+que ya salió.
+
+## 10. Cabeceras de seguridad
+
+| Cabecera | Valor | Qué evita |
+|---|---|---|
+| `X-Content-Type-Options` | `nosniff` | Que el navegador adivine el tipo y ejecute como HTML un JSON con texto elegido por un atacante |
+| `X-Frame-Options` | `DENY` | Secuestro de clics |
+| `Referrer-Policy` | `no-referrer` | Que una ruta como `/api/v1/metas/{id}` viaje a otro sitio |
+| `Content-Security-Policy` | `default-src 'none'; frame-ancestors 'none'; base-uri 'none'` | Carga de cualquier recurso externo |
+| `Permissions-Policy` | `camera=(), microphone=(), geolocation=()` | Acceso a dispositivos |
+| `Cache-Control` | `no-store, no-cache, must-revalidate` | Copias de datos financieros en caché compartida o en disco |
+| `Strict-Transport-Security` | 1 año, con subdominios | Que el navegador vuelva a intentar HTTP siquiera una vez |
+
+Se quitan además `Server` y `X-Powered-By`. No es seguridad de verdad —nadie se detiene por no
+saber la versión—, pero tampoco hay razón para regalar el dato.
+
+Van **antes** del manejador de excepciones en la tubería, así que las llevan también las
+respuestas de error. HSTS **no** se activa en desarrollo: se queda pegado en el navegador
+durante un año y el certificado local no vale fuera de la máquina.
+
+La CSP estricta se exceptúa en `/swagger` y `/openapi`, que son páginas de verdad y necesitan su
+script. Relajar la política para toda la API con tal de que Swagger funcione sería pagar en
+producción una comodidad de desarrollo.
+
+## 11. Tamaño de las peticiones
+
+El cuerpo máximo es **256 KB**. Ningún cuerpo legítimo de Rumbo se acerca: son movimientos y
+presupuestos, no ficheros. Sin tope, una petición enorme obliga al servidor a reservar memoria
+antes de poder rechazarla.
+
+## 12. Revisión OWASP Top 10 (2021)
+
+Revisión de la Fase 9. Se indica lo que está hecho y lo que **no**, sin maquillar.
+
+| # | Riesgo | Estado | Detalle |
+|---|---|---|---|
+| **A01** | Control de acceso roto | ✅ | Cinco capas independientes (§3), permisos por acción (§4), 404 en lugar de 403 para no revelar existencia. Pruebas de aislamiento sobre el pipeline HTTP real |
+| **A02** | Fallos criptográficos | ⚠️ | PBKDF2 de Identity, HTTPS obligatorio, HSTS, contraseñas SMTP cifradas con Data Protection, tokens de renovación guardados solo como hash. **Pendiente:** persistir las claves de Data Protection fuera de la máquina (Fase 10) |
+| **A03** | Inyección | ✅ | EF Core parametriza todo. **Cero** `FromSql` o `ExecuteSql` en el código: verificado por búsqueda, no por confianza. Los enums llegan como texto y se traducen con `Enum.TryParse`, nunca se concatenan |
+| **A04** | Diseño inseguro | ✅ | Registro cerrado por invitación; el administrador de plataforma no puede leer datos financieros; ninguna recomendación mueve dinero |
+| **A05** | Configuración insegura | ✅ | Cabeceras (§10), Swagger solo fuera de producción, sin trazas de pila en producción, `TreatWarningsAsErrors`, secretos fuera del repositorio |
+| **A06** | Componentes vulnerables | ✅ | `dotnet list package --vulnerable --include-transitive`: **ninguna vulnerabilidad conocida** en los ocho proyectos. Gestión central de paquetes: una sola versión por paquete |
+| **A07** | Fallos de identificación | ✅ | Bloqueo por intentos, límite de peticiones (§9), tokens de 15 minutos, rotación con detección de reuso, mensajes indistinguibles en el login y en «olvidé mi clave» |
+| **A08** | Fallos de integridad | ⚠️ | `rowversion` en cuentas y metas, borrado lógico, saldos movidos solo dentro de transacciones. **Pendiente:** firmar los artefactos del despliegue (Fase 10) |
+| **A09** | Fallos de registro | ✅ | `RegistroAuditoria` escrito por interceptor, no a mano; `traceId` en cada error. **Verificado en esta fase:** ningún registro contiene contraseñas, tokens, códigos de invitación ni importes. Se registra el identificador del usuario, nunca el dato |
+| **A10** | SSRF | ⚠️ → ✅ | **Encontrado en esta revisión.** El servidor SMTP de cada espacio lo elige su propietario y la API se conecta a donde le digan. Se acotó: solo puertos 25, 465, 587 y 2525, y se rechazan `localhost` y las direcciones privadas, incluido `169.254.169.254` (metadatos de la nube). **No se resuelve el nombre por DNS a propósito**: un nombre puede resolver a una dirección pública al guardarlo y a una interna al usarlo, así que comprobarlo daría una falsa sensación de seguridad a cambio de una llamada de red en cada guardado. Esto filtra lo evidente; el aislamiento de red de Azure hace el resto |
+
+### Lo que esta revisión encontró
+
+1. **SSRF por el SMTP configurable (A10).** El hallazgo real de la fase. El campo existía desde
+   la Fase 3 y nadie lo había mirado con esta lente.
+2. **El límite estricto de autenticación no se aplicaba**, porque el atributo del controlador
+   quedaba pisado por la política aplicada en bloque a todos los controladores. Lo detectó la
+   prueba, no la revisión de código.
+3. **El límite de invitaciones por hora** estaba en el plan de la Fase 3 y nunca se implementó.
+   Solo existía el tope de pendientes.
+
+## 13. Cobertura de pruebas de seguridad
+
+De las 235 pruebas automáticas, estas verifican seguridad directamente:
 
 | Prueba | Verifica |
 |---|---|
-| `PruebasAislamientoEspacio` (7) | Filtros de EF Core: lectura, agregaciones, escritura cruzada, borrado lógico |
-| `PruebasAislamientoEnLaApi` (6) | La cadena completa por HTTP: token, middleware, permisos, controladores |
-| `PruebasSesion` (6) | Mensajes indistinguibles, rotación, detección de robo, cierre de sesión |
-| `PruebasFlujoDeAlta` (5) | Sin invitación no se entra; código de un solo uso y ligado a un correo |
-| `PruebasCoberturaDeAislamiento` (4) | Ninguna entidad de negocio se queda sin aislamiento |
-| `PruebasGestionDeEspacio` (10) | Reglas que impiden dejar un hogar sin propietario o bloqueado |
-| `PruebasConfiguracionCorreo` (9) | La contraseña SMTP nunca sale por la API; aislamiento entre espacios |
+| `PruebasAislamientoEspacio` | Filtros de EF Core: lectura, agregaciones, escritura cruzada, borrado lógico |
+| `PruebasAislamientoEnLaApi` | La cadena completa por HTTP: token, middleware, permisos, controladores |
+| `PruebasAislamientoFinanciero` | Cuentas, movimientos y saldos no cruzan de espacio |
+| `PruebasSesion` | Mensajes indistinguibles, rotación, detección de robo, cierre de sesión |
+| `PruebasFlujoDeAlta` | Sin invitación no se entra; código de un solo uso y ligado a un correo |
+| `PruebasCoberturaDeAislamiento` | Ninguna entidad de negocio se queda sin aislamiento |
+| `PruebasGestionDeEspacio` | Reglas que impiden dejar un hogar sin propietario o bloqueado |
+| `PruebasConfiguracionCorreo` | La contraseña SMTP nunca sale por la API; aislamiento entre espacios |
+| `PruebasCabecerasSeguridad` | Las cabeceras están en toda respuesta, también en las de error |
+| `PruebasLimiteDePeticiones` | El límite corta de verdad, devuelve `Retry-After`, y `/salud` queda libre |
+| `PruebasLimiteDeInvitaciones` | El tope por hora frena el envío masivo |
+| `PruebasServidorSmtpPermitido` | Puertos y direcciones internas rechazados; los servidores legítimos siguen funcionando |
+| `PruebasSaltoDeFiltros` | Ningún `IgnoreQueryFilters` sin justificar en el código fuente |
+| `PruebasAuditoria` | El historial no expone importes |
 
-## 10. Pendiente
+Además, cada módulo de negocio incluye una prueba de que sus datos no son visibles desde otro
+espacio: metas, presupuestos, viajes, deudas, informes y panel.
+
+> **Nota sobre las pruebas y el limitador.** La fábrica de pruebas general sube los cupos a un
+> número enorme. Con `WebApplicationFactory` la dirección IP es nula, así que **todas** las
+> pruebas caen en la misma partición del limitador y compartirían los cinco intentos por minuto
+> de producción: la suite se rompería sola en cuanto creciera. Que el límite corta de verdad se
+> comprueba en `PruebasLimiteDePeticiones`, que levanta su propia fábrica con cupos bajos y
+> ejercita exactamente el mismo código.
+
+## 14. Pendiente
 
 | Tarea | Fase | Riesgo si se olvida |
 |---|---|---|
 | Persistir las claves de Data Protection en Blob Storage | 10 | **Crítico.** Además de romper los enlaces de «olvidé mi clave», las contraseñas SMTP guardadas dejarían de poder descifrarse al reiniciar, y habría que volver a introducirlas |
-| Límite de peticiones (rate limiting) | 9 | Fuerza bruta distribuida sobre el inicio de sesión |
-| Cabeceras de seguridad (HSTS, CSP, X-Content-Type-Options) | 9 | |
 | SPF y DKIM del dominio remitente | 10 | Los correos de invitación acabarían en spam |
+| Identidad administrada para Key Vault y Azure SQL | 10 | Secretos en la configuración |
 | Segundo factor para el administrador de plataforma | Posterior | Es la cuenta con más alcance del sistema |
-| Revisión OWASP completa | 9 | |
+| Limitador distribuido, si algún día hay más de una instancia | Posterior | El cupo actual es por proceso: con dos instancias, el límite efectivo se duplica |

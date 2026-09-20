@@ -1,6 +1,7 @@
 using System.Reflection;
 
 using Rumbo.Api.Extensiones;
+using Rumbo.Api.Middleware;
 using Rumbo.Infraestructura.MultiEspacio;
 using Rumbo.Infraestructura.Persistencia.Semilla;
 
@@ -34,6 +35,10 @@ await SembradorInicial.SembrarAsync(aplicacion.Services);
 // traza de pila.
 aplicacion.UseExceptionHandler();
 
+// Las cabeceras de seguridad van muy pronto para que las lleve TODA respuesta, incluidas las
+// de error que genera el manejador anterior.
+aplicacion.UseMiddleware<MiddlewareCabecerasSeguridad>();
+
 if (aplicacion.Environment.IsDevelopment() || aplicacion.Environment.IsStaging())
 {
     // Documento OpenAPI en /openapi/v1.json (lo genera el propio ASP.NET Core).
@@ -47,7 +52,18 @@ if (aplicacion.Environment.IsDevelopment() || aplicacion.Environment.IsStaging()
     });
 }
 
+if (!aplicacion.Environment.IsDevelopment())
+{
+    // En desarrollo no: el certificado local no vale para nada fuera de la maquina, y HSTS
+    // se queda pegado en el navegador durante un ano aunque despues se quite.
+    aplicacion.UseHsts();
+}
+
 aplicacion.UseHttpsRedirection();
+
+// El limitador va DESPUES de la autenticacion para poder repartir el cupo por usuario y no
+// solo por IP, y ANTES de los controladores para rechazar el exceso sin tocar la base de
+// datos: una peticion que se va a rechazar no deberia costar una consulta.
 
 // Orden obligatorio: primero se comprueba QUIEN es (autenticacion), despues sobre QUE
 // espacio opera (resolucion), y solo entonces si PUEDE hacerlo (autorizacion). El middleware
@@ -56,6 +72,8 @@ aplicacion.UseHttpsRedirection();
 aplicacion.UseAuthentication();
 aplicacion.UseMiddleware<MiddlewareResolucionEspacio>();
 aplicacion.UseAuthorization();
+
+aplicacion.UseRateLimiter();
 
 aplicacion.MapControllers();
 

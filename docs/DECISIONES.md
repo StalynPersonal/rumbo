@@ -814,3 +814,86 @@ dejen de leer todos.
 Se descubrió también que la regla de «meta alcanzada» buscaba metas **activas** con el objetivo
 cubierto, y esas no existen: el propio aporte cierra la meta en cuanto el acumulado llega al
 objetivo. La regla nunca se habría disparado. Ahora busca las que están en estado `Alcanzada`.
+
+
+---
+
+## D51 — Un limitador global por ruta, no políticas con nombre por endpoint
+**Fecha:** 2026-09-20 · **Estado:** aceptada
+
+**Contexto.** La primera implementación puso `[EnableRateLimiting("autenticacion")]` en
+`AutenticacionController` y `MapControllers().RequireRateLimiting("general")` para el resto.
+
+**Problema encontrado.** La convención aplicada en bloque **pisa** al atributo del controlador:
+el cupo estricto de autenticación nunca se aplicaba y los intentos de acceso caían bajo el cupo
+general. No falló nada ni saltó ninguna advertencia. Lo detectó la prueba que comprueba que el
+tercer intento devuelve 429.
+
+**Decisión.** Un único `GlobalLimiter` que elige la partición mirando la ruta: cupo estricto
+bajo `/api/v1/autenticacion`, cupo amplio bajo `/api`, sin límite en `/salud` y Swagger.
+
+**Por qué.** El reparto queda en un solo sitio y se lee de un vistazo, sin precedencias entre
+metadatos que nadie recuerda. Y `/salud` queda libre a propósito: Azure lo consulta cada pocos
+segundos como comprobación de vida; si el limitador lo cortara, la plataforma creería que la API
+está caída y la reiniciaría.
+
+---
+
+## D52 — Los cupos del limitador son configurables
+**Fecha:** 2026-09-20 · **Estado:** aceptada
+
+**Contexto.** Con `WebApplicationFactory` la dirección IP de la petición es nula, así que todas
+las pruebas de integración caen en la misma partición del limitador.
+
+**Decisión.** Los cupos se leen de la configuración (`LimitePeticiones:PorMinutoAutenticacion` y
+`PorMinutoGeneral`). La fábrica de pruebas general los sube a 100 000; `FabricaConCupoBajo` los
+baja a 2 y 3 para comprobar que el límite corta de verdad.
+
+**Por qué.** Con los cupos de producción fijos en código, la suite compartiría cinco intentos por
+minuto entre todas las pruebas de autenticación y se rompería sola en cuanto creciera. Desactivar
+el limitador en pruebas habría dejado el código sin verificar; así se ejercita exactamente el
+mismo camino. Además, el cupo bueno depende de cuánta gente use la instalación, y ajustarlo no
+debería exigir recompilar.
+
+---
+
+## D53 — El servidor SMTP de un espacio no puede apuntar a la red interna
+**Fecha:** 2026-09-20 · **Estado:** aceptada
+
+**Contexto.** Desde la Fase 3, cada propietario configura el host y el puerto de su servidor de
+correo, y la API se conecta a donde le digan. La revisión OWASP de la Fase 9 lo identificó como
+un vector de **SSRF** (A10): el campo permite hacer que Rumbo hable con lo que haya detrás del
+cortafuegos, o sondear qué puertos están abiertos midiendo cuánto tarda en fallar cada intento.
+
+**Decisión.** Dos restricciones al guardar:
+
+1. El puerto debe ser 25, 465, 587 o 2525.
+2. Se rechazan `localhost`, las direcciones de bucle y los rangos privados —10/8, 172.16/12,
+   192.168/16, 169.254/16 y sus equivalentes IPv6—.
+
+`169.254.169.254` merece mención aparte: es el servicio de metadatos de las nubes, el destino
+clásico de este abuso porque devuelve credenciales de la máquina.
+
+**Lo que esto NO hace.** No se resuelve el nombre por DNS. Un nombre puede resolver a una
+dirección pública cuando se guarda y a una interna cuando se usa, así que comprobarlo daría una
+falsa sensación de seguridad a cambio de una llamada de red en cada guardado. Esto filtra lo
+evidente; el aislamiento de red del entorno de despliegue hace el resto.
+
+**Por qué no se quitó el SMTP por espacio.** Es un requisito explícito del proyecto: cada
+propietario usa su propio correo con sus credenciales. La respuesta correcta es acotarlo, no
+retirarlo.
+
+---
+
+## D54 — Límite de invitaciones por hora, además del de pendientes
+**Fecha:** 2026-09-20 · **Estado:** aceptada
+
+**Contexto.** El plan de la Fase 3 pedía un límite «por espacio y por hora». Solo se implementó
+el de pendientes (20 por espacio).
+
+**Decisión.** Se añade un tope de **10 invitaciones por hora** y por espacio, contando todas las
+creadas en la última hora sea cual sea su estado.
+
+**Por qué.** El tope de pendientes acota cuántas puertas quedan abiertas a la vez, pero no
+cuántos correos salen: bastaba con anular las veinte pendientes y volver a crearlas en bucle. Se
+cuentan también las anuladas porque anular una invitación no deshace el correo que ya salió.

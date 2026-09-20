@@ -18,6 +18,8 @@ namespace Rumbo.Api.Controladores.V1;
 [ApiController]
 [Route("api/v1/autenticacion")]
 [Produces("application/json")]
+// El limitador aplica a este controlador un cupo estricto —cinco peticiones por minuto y
+// por origen— por su ruta, no por un atributo: ver LimitesDePeticiones y docs/SEGURIDAD.md.
 public class AutenticacionController(IServicioAutenticacion autenticacion) : ControllerBase
 {
     /// <summary>Da de alta una cuenta canjeando un codigo de invitacion.</summary>

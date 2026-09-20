@@ -63,6 +63,14 @@ public class FabricaApiDePrueba : WebApplicationFactory<Program>, IAsyncLifetime
         constructor.UseSetting(
             "Rumbo:AdministradorInicial:NombreCompleto", "Administrador de Pruebas");
 
+        // Cupos muy altos para el limitador. Con WebApplicationFactory la direccion IP es
+        // nula, asi que TODAS las pruebas caen en la misma particion del limitador y
+        // compartirian los cinco intentos por minuto de produccion: la suite se romperia
+        // sola en cuanto creciera. Que el limite corta de verdad se comprueba en
+        // PruebasLimiteDePeticiones, que levanta su propia fabrica con cupos bajos.
+        constructor.UseSetting("LimitePeticiones:PorMinutoAutenticacion", "100000");
+        constructor.UseSetting("LimitePeticiones:PorMinutoGeneral", "100000");
+
         // Sin servidor SMTP: el enviador registra el correo en el log y devuelve false, que
         // es justo uno de los comportamientos que hay que poder probar.
         constructor.UseSetting("Correo:Host", string.Empty);

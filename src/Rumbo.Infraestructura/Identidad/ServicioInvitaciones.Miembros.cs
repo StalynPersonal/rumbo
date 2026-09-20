@@ -190,10 +190,16 @@ public partial class ServicioInvitaciones
         }
     }
 
-    /// <summary>Aplica el limite de invitaciones pendientes por espacio.</summary>
+    /// <summary>Aplica los limites de invitaciones por espacio.</summary>
     /// <param name="espacioId">Espacio que invita.</param>
     /// <param name="cancelacion">Token de cancelacion.</param>
     /// <returns>Tarea que finaliza cuando termina la comprobacion.</returns>
+    /// <remarks>
+    /// Son <b>dos</b> limites y hacen falta los dos. El de pendientes acota cuantas puertas
+    /// quedan abiertas a la vez; el de la ultima hora acota cuantos correos salen de nuestro
+    /// servidor SMTP. Sin el segundo, bastaria con anular las veinte pendientes y volver a
+    /// crearlas en bucle para mandar correo sin tope y arruinar la reputacion del dominio.
+    /// </remarks>
     private async Task VerificarLimiteDePendientesAsync(Guid espacioId, CancellationToken cancelacion)
     {
         var pendientes = await contexto.Invitaciones.CountAsync(
@@ -203,6 +209,20 @@ public partial class ServicioInvitaciones
         {
             throw new ExcepcionDominio(
                 $"Este espacio ya tiene {MaximoPendientesPorEspacio} invitaciones pendientes.");
+        }
+
+        var desde = fechaHora.AhoraUtc.AddHours(-1);
+
+        // Se cuentan TODAS las creadas en la ultima hora, sea cual sea su estado: anular una
+        // invitacion no deshace el correo que ya salio.
+        var recientes = await contexto.Invitaciones.CountAsync(
+            i => i.EspacioId == espacioId && i.FechaCreacion >= desde, cancelacion);
+
+        if (recientes >= MaximoPorHoraPorEspacio)
+        {
+            throw new ExcepcionDominio(
+                $"Este espacio ya envió {MaximoPorHoraPorEspacio} invitaciones en la última "
+                + "hora. Espera un poco antes de enviar más.");
         }
     }
 }

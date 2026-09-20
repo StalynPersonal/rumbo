@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 
 using Rumbo.Api.Autorizacion;
 using Rumbo.Api.Middleware;
+using Rumbo.Api.Seguridad;
 using Rumbo.Infraestructura;
 
 namespace Rumbo.Api.Extensiones;
@@ -31,6 +32,38 @@ public static class ExtensionesServicios
         servicios.AgregarInfraestructura(configuracion);
 
         servicios.AddControllers();
+
+        // --- Limite de peticiones -----------------------------------------------
+        // Frena la fuerza bruta contra las claves y el abuso de los endpoints que mandan
+        // correo. Ver docs/SEGURIDAD.md.
+        servicios.AgregarLimitesDePeticiones(configuracion);
+
+        // --- Tamano maximo del cuerpo -------------------------------------------
+        // Ningun cuerpo legitimo de Rumbo llega a 256 KB: son movimientos y presupuestos,
+        // no ficheros. Sin tope, una peticion enorme obliga al servidor a reservar memoria
+        // antes de poder rechazarla.
+        servicios.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(opciones =>
+        {
+            opciones.MultipartBodyLengthLimit = 256 * 1024;
+        });
+
+        servicios.Configure<Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerOptions>(
+            opciones =>
+            {
+                opciones.Limits.MaxRequestBodySize = 256 * 1024;
+
+                // No se anuncia la version del servidor en cada respuesta.
+                opciones.AddServerHeader = false;
+            });
+
+        // --- HSTS -----------------------------------------------------------------
+        // Un ano y con subdominios: le dice al navegador que jamas vuelva a hablar con
+        // este dominio por HTTP, ni siquiera en el primer intento de una redireccion.
+        servicios.AddHsts(opciones =>
+        {
+            opciones.MaxAge = TimeSpan.FromDays(365);
+            opciones.IncludeSubDomains = true;
+        });
 
         // --- Autorizacion por permiso ------------------------------------------
         // El proveedor construye al vuelo una politica por cada permiso que se use, de modo
