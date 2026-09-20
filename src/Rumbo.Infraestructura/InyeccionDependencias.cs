@@ -10,7 +10,9 @@ using Rumbo.Aplicacion.Calculadoras;
 using Rumbo.Aplicacion.Comun;
 using Rumbo.Aplicacion.Modulos.Categorias;
 using Rumbo.Aplicacion.Modulos.Cuentas;
+using Rumbo.Aplicacion.Modulos.Monedas;
 using Rumbo.Aplicacion.Modulos.Movimientos;
+using Rumbo.Aplicacion.Modulos.Recurrentes;
 using Microsoft.IdentityModel.Tokens;
 
 using Rumbo.Aplicacion.Contratos;
@@ -159,6 +161,8 @@ public static class InyeccionDependencias
         servicios.AddScoped<IServicioCuentas, ServicioCuentas>();
         servicios.AddScoped<IServicioCategorias, ServicioCategorias>();
         servicios.AddScoped<IServicioMovimientos, ServicioMovimientos>();
+        servicios.AddScoped<IServicioMonedas, ServicioMonedas>();
+        servicios.AddScoped<IServicioRecurrentes, ServicioRecurrentes>();
 
         // --- Validacion del token en cada peticion -----------------------------
         var opcionesJwt = configuracion.GetSection(OpcionesJwt.Seccion).Get<OpcionesJwt>()

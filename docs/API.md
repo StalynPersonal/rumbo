@@ -152,6 +152,52 @@ dinero sí sale del hogar.
 **Un aporte a una meta es una transferencia**, no un gasto. Se indica `metaId` en el traspaso y
 el sistema deja constancia del aporte. Ahorrar no es gastar.
 
+## Gastos e ingresos recurrentes
+
+| Ruta | Permiso | Qué hace |
+|---|---|---|
+| `GET /gastos-recurrentes` | `movimientos.leer` | Lista, con los días que faltan para vencer |
+| `POST /gastos-recurrentes` | `movimientos.escribir` | Crea una obligación |
+| `PUT /gastos-recurrentes/{id}` | `movimientos.escribir` | Modifica |
+| `PUT /gastos-recurrentes/{id}/estado?estado=` | `movimientos.escribir` | Pausa, reactiva o finaliza |
+| `DELETE /gastos-recurrentes/{id}` | `movimientos.eliminar` | Elimina |
+| `POST /gastos-recurrentes/{id}/pagar` | `movimientos.escribir` | **Confirma el pago** |
+| `GET/POST/PUT/DELETE /ingresos-recurrentes` | idem | Equivalente para ingresos |
+| `POST /ingresos-recurrentes/{id}/cobrar` | `movimientos.escribir` | Confirma el cobro |
+
+**No son movimientos, sino plantillas.** Sirven para avisar de lo que viene y para que el
+motor de recomendaciones sepa cuánto dinero está ya comprometido.
+
+**Rumbo nunca crea el movimiento por su cuenta al llegar la fecha.** Avisa, y el movimiento se
+registra al confirmar el pago. Generarlo automáticamente haría que el saldo dejara de reflejar
+la realidad en cuanto un pago se retrasara o cambiara de importe, que es lo habitual en un
+recibo de luz.
+
+Al confirmar, **el importe real manda sobre el estimado** y la próxima fecha se calcula desde
+la que *vencía*, no desde la del pago: si se paga con tres días de retraso cada mes, calcularla
+desde el pago iría corriendo el vencimiento y en un año el recibo cambiaría de semana.
+
+## Monedas y tasas de cambio
+
+| Ruta | Permiso | Qué hace |
+|---|---|---|
+| `GET /monedas` | autenticado | Catálogo ISO-4217 |
+| `GET /tasas-cambio?origen=&destino=` | autenticado | Tasas de un par, de la más reciente |
+| `POST /tasas-cambio` | `espacio.escribir` | Registra o **actualiza** una tasa |
+| `DELETE /tasas-cambio/{id}` | `espacio.escribir` | Elimina una tasa |
+| `GET /tasas-cambio/convertir` | autenticado | Previsualiza una conversión |
+
+Son datos **globales**: el catálogo y las cotizaciones son información pública, no de un hogar.
+Por eso una tasa que carga un espacio la ven todos.
+
+La tasa se expresa como *cuántas unidades de destino equivalen a una de origen*: con el dólar a
+60 pesos, `USD → DOP` es `60`. La conversión inversa se deduce sola, así que no hace falta
+cargar `DOP → USD`.
+
+Registrar dos veces el mismo par y la misma fecha **actualiza** la tasa en lugar de crear otra:
+dos valores para el mismo día harían que el mismo movimiento se convirtiera distinto según cuál
+se leyera.
+
 ### Moneda
 
 Cada movimiento guarda su importe, su moneda y su equivalente en la moneda base del espacio,
