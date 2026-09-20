@@ -394,3 +394,95 @@ El excedente sale de `AnalizadorFlujoCaja`, que ya descuenta los compromisos rec
 menos de tres meses de historial la respuesta llega con `confianzaBaja: true`.
 
 **No mueve dinero, no crea aportes y no reserva nada.** Es una proyección para decidir.
+
+
+## Deudas
+
+| Ruta | Permiso | Qué hace |
+|---|---|---|
+| `GET /deudas?incluirSaldadas=` | `deudas.leer` | Lista, de mayor a menor saldo |
+| `GET /deudas/{id}` | `deudas.leer` | Una deuda con su avance |
+| `POST /deudas` | `deudas.escribir` | Crea una deuda |
+| `PUT /deudas/{id}` | `deudas.escribir` | Modifica (el saldo **no**) |
+| `PUT /deudas/{id}/estado` | `deudas.escribir` | Activa, Saldada, Refinanciada |
+| `DELETE /deudas/{id}` | `deudas.escribir` | Elimina una deuda **sin pagos** |
+| `GET /deudas/{id}/pagos` | `deudas.leer` | Historial de pagos |
+| `POST /deudas/{id}/pagos` | `deudas.escribir` | Registra un pago |
+
+Un pago se envía desglosado en **capital**, **interés** y **cargos**; el total es la suma y no
+se envía. El asiento, el saldo de la cuenta y el saldo de la deuda se mueven en la misma
+transacción.
+
+**Un pago de deuda sí es un gasto**, a diferencia de una transferencia: el dinero sale de la
+cuenta y no aparece en ningún otro sitio del hogar. Que la parte de capital reduzca además una
+obligación no cambia que ese dinero ya no está disponible este mes.
+
+El **saldo pendiente no se puede editar**: lo mueven los pagos, y solo ellos. Un capital mayor
+que lo que se debe se rechaza —dejaría al banco debiendo dinero al hogar—, y al llegar a cero
+la deuda pasa sola a `Saldada`.
+
+`mesesEstimadosRestantes` divide el saldo entre la cuota (`pagoMensual`, o `pagoMinimo` si no
+hay). Sin ninguna de las dos no se estima nada: inventar un plazo sería peor que no dar ninguno.
+
+## Informes
+
+| Ruta | Permiso | Qué hace |
+|---|---|---|
+| `GET /reportes/resumen` | `reportes.leer` | Ingresos, gastos, balance y tasa de ahorro |
+| `GET /reportes/categorias` | `reportes.leer` | Gasto por categoría, de mayor a menor |
+| `GET /reportes/mensual` | `reportes.leer` | Serie mensual y promedios |
+| `GET /reportes/reparto` | `reportes.leer` | Quién puso cuánto en lo compartido |
+
+Filtros comunes: `Desde`, `Hasta`, `CuentaId`, `CategoriaId`, `UsuarioId`, `Reparto`. Sin fechas
+se toman los últimos doce meses.
+
+Todos pasan por el mismo `IQueryable` base, que **excluye las transferencias**. Es la única
+forma de que la regla no se rompa cada vez que se escribe un informe nuevo. Y todos suman por el
+equivalente en moneda base congelado a la fecha del movimiento, así que un mes ya cerrado no
+cambia de resultado si mañana se mueve el tipo de cambio.
+
+La serie mensual **incluye los meses sin movimientos**: un mes vacío es información, y saltárselo
+deformaría la gráfica.
+
+El informe de reparto **registra y reporta** el desbalance de los gastos compartidos, pero no
+liquida entre personas ni mueve dinero. Quién salda y cómo es una conversación del hogar.
+
+## Panel
+
+| Ruta | Permiso | Qué hace |
+|---|---|---|
+| `GET /panel` | `reportes.leer` | Toda la pantalla de inicio en una petición |
+
+Devuelve patrimonio consolidado, mes en curso y mes anterior, las cinco categorías donde más se
+gasta, las partidas de presupuesto en alerta, los compromisos que vencen en quince días, el
+avance de las metas, las sugerencias pendientes y cuántos avisos hay sin leer.
+
+Una sola petición en lugar de ocho: en una conexión móvil lenta, ocho peticiones son ocho
+oportunidades de que la pantalla se quede a medias.
+
+El panel **no recalcula nada**: reutiliza los mismos servicios que las pantallas de detalle. Si
+tuviera su propia aritmética, tarde o temprano mostraría una cifra distinta y ninguna de las dos
+sería creíble.
+
+El `patrimonioNeto` resta las deudas. Mostrar solo el saldo de las cuentas daría una sensación de
+holgura que no se corresponde con la realidad de un hogar endeudado.
+
+## Notificaciones
+
+| Ruta | Permiso | Qué hace |
+|---|---|---|
+| `GET /notificaciones?soloSinLeer=` | `notificaciones.leer` | Lista los avisos |
+| `POST /notificaciones/generar` | `notificaciones.leer` | Revisa el hogar y crea los que procedan |
+| `PUT /notificaciones/{id}/leida` | `notificaciones.gestionar` | Marca uno como leído |
+| `PUT /notificaciones/leidas` | `notificaciones.gestionar` | Marca todos como leídos |
+| `DELETE /notificaciones/{id}` | `notificaciones.gestionar` | Descarta uno |
+
+Se **persisten** aunque todavía no exista transporte push: cuando se enchufe, el historial ya
+estará ahí y no habrá que inventarlo.
+
+**No se duplican.** Antes de crear uno se comprueba que no exista ya otro del mismo tipo sobre lo
+mismo, leído o no. Los que sí deben repetirse llevan la fecha dentro de sus datos, así que el
+aviso del mes que viene es un aviso distinto.
+
+Descartar **no borra**: saber que se avisó y que la persona lo apartó permite medir si los avisos
+sirven de algo.

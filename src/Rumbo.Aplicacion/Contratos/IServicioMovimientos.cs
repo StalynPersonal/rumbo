@@ -1,4 +1,5 @@
 using Rumbo.Contratos.Comun;
+using Rumbo.Contratos.Deudas;
 using Rumbo.Contratos.Movimientos;
 
 namespace Rumbo.Aplicacion.Contratos;
@@ -63,6 +64,22 @@ public interface IServicioMovimientos
     /// saldo y en los informes.
     /// </remarks>
     Task EliminarAsync(Guid movimientoId, CancellationToken cancelacion = default);
+
+    /// <summary>Registra un pago contra una deuda.</summary>
+    /// <param name="deudaId">Deuda que se paga.</param>
+    /// <param name="solicitud">Cuenta, desglose del pago y fecha.</param>
+    /// <param name="cancelacion">Token de cancelacion.</param>
+    /// <returns>El pago registrado.</returns>
+    /// <remarks>
+    /// Vive en este servicio, y no en el de deudas, porque mueve el saldo de una cuenta:
+    /// toda la logica que toca saldos esta en un solo sitio. El asiento, el saldo de la
+    /// cuenta, el registro del pago y el saldo de la deuda se mueven en la misma
+    /// transaccion.
+    /// </remarks>
+    Task<PagoDeudaDto> PagarDeudaAsync(
+        Guid deudaId,
+        SolicitudPagarDeuda solicitud,
+        CancellationToken cancelacion = default);
 
     /// <summary>Traspasa dinero entre dos cuentas del espacio.</summary>
     /// <param name="solicitud">Datos del traspaso.</param>

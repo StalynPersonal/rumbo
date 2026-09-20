@@ -115,6 +115,20 @@ public static class Permisos
         public const string Leer = "reportes.leer";
     }
 
+    /// <summary>Permisos sobre los avisos del hogar.</summary>
+    public static class Notificaciones
+    {
+        /// <summary>Consultar los avisos y pedir que se regeneren.</summary>
+        public const string Leer = "notificaciones.leer";
+
+        /// <summary>Marcar como leidos o descartar avisos.</summary>
+        /// <remarks>
+        /// Lo tiene cualquier miembro: apartar un aviso propio no es una accion privilegiada,
+        /// y obligar a pedir permiso para ello seria absurdo.
+        /// </remarks>
+        public const string Gestionar = "notificaciones.gestionar";
+    }
+
     /// <summary>Permisos sobre la gestion del propio espacio.</summary>
     public static class Espacio
     {

@@ -36,6 +36,8 @@ public static class MapaPermisos
         Permisos.Deudas.Leer,
         Permisos.Reportes.Leer,
         Permisos.Recomendaciones.Leer,
+        Permisos.Notificaciones.Leer,
+        Permisos.Notificaciones.Gestionar,
         Permisos.Espacio.Leer,
     ];
 

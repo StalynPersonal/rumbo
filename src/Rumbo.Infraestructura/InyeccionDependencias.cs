@@ -12,7 +12,11 @@ using Rumbo.Aplicacion.Modulos.Categorias;
 using Rumbo.Aplicacion.Modulos.Cuentas;
 using Rumbo.Aplicacion.Modulos.Monedas;
 using Rumbo.Aplicacion.Modulos.Movimientos;
+using Rumbo.Aplicacion.Modulos.Deudas;
 using Rumbo.Aplicacion.Modulos.Metas;
+using Rumbo.Aplicacion.Modulos.Notificaciones;
+using Rumbo.Aplicacion.Modulos.Panel;
+using Rumbo.Aplicacion.Modulos.Reportes;
 using Rumbo.Aplicacion.Modulos.Presupuestos;
 using Rumbo.Aplicacion.Modulos.Recomendaciones;
 using Rumbo.Aplicacion.Modulos.Recurrentes;
@@ -178,6 +182,7 @@ public static class InyeccionDependencias
         servicios.AddScoped<IServicioPresupuestos, ServicioPresupuestos>();
         servicios.AddScoped<IServicioMetas, ServicioMetas>();
         servicios.AddScoped<IServicioViajes, ServicioViajes>();
+        servicios.AddScoped<IServicioDeudas, ServicioDeudas>();
 
         // Las reglas se registran como una coleccion: el motor las recibe todas y las
         // ejecuta por orden de prioridad. Anadir una regla nueva es anadir una linea aqui,
@@ -188,6 +193,15 @@ public static class InyeccionDependencias
         servicios.AddScoped<IReglaRecomendacion, ReglaAlertaDePresupuesto>();
         servicios.AddScoped<MotorRecomendaciones>();
         servicios.AddScoped<IServicioRecomendaciones, ServicioRecomendaciones>();
+
+        // --- Informes, panel y avisos ----------------------------------------
+        servicios.AddScoped<IDirectorioUsuarios, DirectorioUsuarios>();
+        servicios.AddScoped<IServicioReportes, ServicioReportes>();
+        servicios.AddScoped<IServicioNotificaciones, ServicioNotificaciones>();
+
+        // El panel va el ultimo porque depende de casi todos los anteriores: no calcula
+        // nada por su cuenta, solo reune lo que ya calculan ellos.
+        servicios.AddScoped<IServicioPanel, ServicioPanel>();
 
         // --- Validacion del token en cada peticion -----------------------------
         var opcionesJwt = configuracion.GetSection(OpcionesJwt.Seccion).Get<OpcionesJwt>()

@@ -718,3 +718,99 @@ dinero todavía está. Propone **una** meta y no un reparto: media docena de apo
 acercan ninguna, y uno solo a la más urgente sí.
 
 Ninguna de las dos mueve dinero.
+
+
+---
+
+## D45 — Un pago de deuda sí es un gasto
+**Fecha:** 2026-09-20 · **Estado:** aceptada
+
+**Contexto.** En contabilidad, devolver capital reduce un pasivo y no es un gasto; solo el
+interés lo es. Eso invitaba a registrar únicamente el interés.
+
+**Decisión.** El pago completo —capital + interés + cargos— se registra como **un gasto**. El
+desglose se guarda en `PagoDeuda` para poder analizarlo.
+
+**Por qué.** El dinero sale de la cuenta de verdad, y a diferencia de una transferencia no
+aparece en ningún otro sitio del hogar. Si solo se registrara el interés, el saldo de la cuenta
+quedaría descuadrado con el libro mayor, que es la línea que este proyecto no cruza. Y para un
+presupuesto familiar, la cuota del carro es dinero que este mes ya no está disponible: contarla
+como gasto es lo honesto, aunque un contador lo clasificaría distinto.
+
+El desglose sigue disponible: `interesTotalPagado` permite ver cuánto se llevó el banco.
+
+---
+
+## D46 — El pago de deuda vive en el módulo de movimientos
+**Fecha:** 2026-09-20 · **Estado:** aceptada
+
+**Decisión.** `IServicioMovimientos.PagarDeudaAsync` está en el módulo del libro mayor;
+`ServicioDeudas.PagarAsync` solo delega.
+
+**Por qué.** Un pago mueve el saldo de una cuenta, y **toda** la lógica que toca saldos vive en
+un solo sitio: conversión de moneda, signo, actualización del saldo y transacción. Duplicarla en
+el módulo de deudas habría significado dos implementaciones que se desincronizan a la primera
+corrección. Así el asiento, el saldo de la cuenta, el registro del pago y el saldo de la deuda
+se mueven en la misma transacción: o pasa todo o no pasa nada.
+
+---
+
+## D47 — El saldo de una deuda solo lo mueven los pagos
+**Fecha:** 2026-09-20 · **Estado:** aceptada
+
+**Decisión.** `PUT /deudas/{id}` ignora el campo `saldoActual`. Solo se fija al crear.
+
+**Por qué.** Si se pudiera editar a mano, el saldo y el historial de pagos dirían cosas distintas
+y no habría forma de saber cuál es la buena. Es la misma razón por la que el saldo de una cuenta
+no se edita: la verdad son los asientos.
+
+---
+
+## D48 — El panel no recalcula nada
+**Fecha:** 2026-09-20 · **Estado:** aceptada
+
+**Decisión.** `ServicioPanel` reutiliza `IServicioReportes`, `IServicioPresupuestos`,
+`IServicioMetas` y `IServicioRecomendaciones`. No tiene aritmética propia.
+
+**Por qué.** Si el panel calculara los presupuestos por su cuenta, tarde o temprano mostraría un
+porcentaje distinto al de la pantalla de presupuestos, y entonces ninguna de las dos sería
+creíble. Hay una prueba de integración que compara las dos cifras directamente.
+
+Se devuelve todo en una respuesta a propósito: la aplicación móvil se abre con una llamada en
+lugar de ocho. En una conexión lenta, ocho peticiones son ocho oportunidades de que la pantalla
+se quede a medias.
+
+---
+
+## D49 — `IDirectorioUsuarios` para traducir identificadores a nombres
+**Fecha:** 2026-09-20 · **Estado:** aceptada
+
+**Contexto.** El informe de reparto necesita escribir «María» junto a una cifra, pero los
+usuarios viven en las tablas de Identity, que son cosa de infraestructura, y
+`IContextoRumbo` —a propósito— no las expone.
+
+**Decisión.** Una interfaz en la capa de aplicación con un solo método: dame estos
+identificadores, devuélveme sus nombres. La implementación vive en infraestructura.
+
+**Por qué.** Mantiene la regla de dependencias intacta sin abrir el contexto entero. Y expone lo
+mínimo: solo el nombre para mostrar, ni correo ni roles ni nada más.
+
+---
+
+## D50 — Un aviso no se repite aunque ya se haya leído
+**Fecha:** 2026-09-20 · **Estado:** aceptada
+
+**Contexto.** La primera versión comparaba solo contra los avisos **sin leer**. Eso hacía que un
+aviso ya leído volviera a aparecer en el siguiente recálculo.
+
+**Decisión.** La comprobación de duplicados mira **todas** las notificaciones existentes, leídas
+y descartadas incluidas. Los avisos que sí deben repetirse llevan la fecha dentro de sus datos,
+así que el del mes que viene es un aviso distinto y se genera sin problema.
+
+**Por qué.** Algo que ya se atendió no debería reclamar atención otra vez, y descartar un aviso
+tiene que significar algo. Recibir cinco veces «el recibo de la luz vence pronto» hace que se
+dejen de leer todos.
+
+Se descubrió también que la regla de «meta alcanzada» buscaba metas **activas** con el objetivo
+cubierto, y esas no existen: el propio aporte cierra la meta en cuanto el acumulado llega al
+objetivo. La regla nunca se habría disparado. Ahora busca las que están en estado `Alcanzada`.
