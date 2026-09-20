@@ -203,6 +203,21 @@ Al confirmar, **el importe real manda sobre el estimado** y la próxima fecha se
 la que *vencía*, no desde la del pago: si se paga con tres días de retraso cada mes, calcularla
 desde el pago iría corriendo el vencimiento y en un año el recibo cambiaría de semana.
 
+## Auditoría
+
+| Ruta | Permiso | Qué hace |
+|---|---|---|
+| `GET /auditoria` | `auditoria.leer` | Historial del espacio, paginado |
+
+Filtros: `Desde`, `Hasta`, `UsuarioId`, `TipoEntidad`, `EntidadId`, `Accion`, `Pagina`,
+`TamanoPagina`.
+
+Responde «¿quién cambió este gasto y cuándo?». **No devuelve el detalle de los cambios**: ese
+campo guarda los valores anteriores y nuevos, que en un movimiento son importes, y exponerlo
+sería una segunda vía para leer las finanzas saltándose los permisos del módulo.
+
+Reservado a quien administra el hogar: el historial revela los hábitos de cada persona.
+
 ## Monedas y tasas de cambio
 
 | Ruta | Permiso | Qué hace |

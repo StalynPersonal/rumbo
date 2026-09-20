@@ -156,6 +156,7 @@ public static class InyeccionDependencias
         servicios.AddScoped<IServicioEspacios, ServicioEspacios>();
         servicios.AddScoped<IServicioUsuarios, ServicioUsuarios>();
         servicios.AddScoped<IServicioAdministracion, ServicioAdministracion>();
+        servicios.AddScoped<IServicioAuditoria, ServicioAuditoria>();
 
         // --- Servicios financieros (viven en la capa de aplicacion) -----------
         servicios.AddScoped<ConversorMonedas>();

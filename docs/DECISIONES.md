@@ -499,3 +499,62 @@ escribirle. Es un dato de contacto, no financiero.
 **Verificación.** `ElAdministradorVeLosEspaciosSinDatosFinancieros` registra una cuenta con un
 saldo reconocible y comprueba que ese número **no aparece en el JSON en crudo** de la respuesta
 del administrador.
+
+---
+
+## D32 — Enmienda a D6: el alcance del administrador se garantiza con una prueba, no con un contexto aparte
+**Fecha:** 2026-09-20 · **Estado:** aceptada · **Enmienda a:** D6
+
+**Qué decía D6.** Que el administrador de plataforma usaría un `ContextoAdministracion` que
+solo expusiera `Espacios`, `Usuarios`, `MembresiasEspacio` e `Invitaciones`.
+
+**Qué pasó.** No se implementó. `ServicioAdministracion` usa `ContextoRumbo` directamente.
+Funcionalmente da igual —esas tablas son globales y las financieras están filtradas— pero **la
+garantía documentada no existía**: nada impedía añadir mañana una consulta a `Movimientos`.
+
+**Decisión.** En lugar de crear el segundo contexto, se añade
+`PruebasAlcanceDelAdministrador`, que falla si `ServicioAdministracion` menciona cualquier
+tabla financiera, y si algún controlador financiero menciona el rol de plataforma.
+
+**Por qué es mejor que el contexto aparte.** Un segundo `DbContext` significa mantener dos
+configuraciones de modelo que pueden divergir en silencio, y no impide que alguien inyecte el
+contexto principal. La prueba da la misma garantía, se verifica sola en cada compilación y
+explica el motivo cuando falla.
+
+---
+
+## D33 — `IgnoreQueryFilters` solo se usa donde está justificado por escrito
+**Fecha:** 2026-09-20 · **Estado:** aceptada
+
+**Problema encontrado.** El plan prometía una prueba de arquitectura que prohibiera
+`IgnoreQueryFilters` fuera del módulo de administración. **Nunca se escribió**, y mientras
+tanto apareció un uso en `ResolvedorCorreo`, justo fuera de donde estaba permitido.
+
+**Decisión.** Dos medidas:
+
+1. Se **eliminó** ese uso. Estaba pensado para un futuro proceso en segundo plano que enviara
+   avisos de varios hogares, pero saltarse el aislamiento «por si acaso» abre un agujero real
+   hoy a cambio de una comodidad futura. Con el filtro activo, pedir la configuración de otro
+   espacio no devuelve nada y el correo sale por el servidor de plataforma: comportamiento
+   seguro.
+2. Se escribió `PruebasSaltoDeFiltros`, que recorre el **código fuente** —en el binario la
+   llamada queda diluida en la expresión LINQ— y exige que cada uso figure en una lista con su
+   justificación. Hoy solo hay uno, en una prueba que verifica el borrado lógico.
+
+---
+
+## D34 — El historial de auditoría no expone los importes
+**Fecha:** 2026-09-20 · **Estado:** aceptada
+
+**Contexto.** El permiso `auditoria.leer` existía desde la Fase 3 sin ningún endpoint que lo
+usara. Al implementarlo apareció la pregunta de qué devolver.
+
+**Decisión.** `GET /auditoria` devuelve quién, qué, cuándo y sobre qué entidad, pero **no el
+campo de cambios**, que guarda los valores anteriores y nuevos.
+
+**Por qué.** En un movimiento esos valores son importes. Exponerlos convertiría el historial en
+una segunda vía para leer las finanzas del hogar, saltándose los permisos del módulo de
+movimientos: alguien con `auditoria.leer` pero sin `movimientos.leer` vería el dinero igual.
+
+El endpoint queda además reservado a quien administra el hogar: el historial revela los hábitos
+de cada persona, y no todos los miembros tienen por qué poder auditarse entre sí.

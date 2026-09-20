@@ -57,11 +57,15 @@ public class ResolvedorCorreo(
     {
         if (espacioId.HasValue)
         {
-            // IgnoreQueryFilters porque este resolvedor puede ejecutarse en contextos sin
-            // espacio activo (por ejemplo, un proceso en segundo plano que envia avisos de
-            // varios hogares). El aislamiento se garantiza aqui con el Where explicito.
+            // SIN IgnoreQueryFilters, a proposito. Se penso para un futuro proceso en
+            // segundo plano que enviara avisos de varios hogares, pero saltarse el filtro
+            // "por si acaso" abre un agujero real hoy a cambio de una comodidad futura.
+            //
+            // Con el filtro activo, pedir la configuracion de un espacio que no es el
+            // activo simplemente no devuelve nada, y el correo sale por el servidor de
+            // plataforma. Es el comportamiento seguro. Cuando exista ese proceso, se le
+            // dara su propio camino explicito.
             var delEspacio = await contexto.Set<ConfiguracionCorreoEspacio>()
-                .IgnoreQueryFilters()
                 .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.EspacioId == espacioId.Value, cancelacion);
 
