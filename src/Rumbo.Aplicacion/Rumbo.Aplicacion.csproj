@@ -7,6 +7,13 @@
 
   <ItemGroup>
     <PackageReference Include="FluentValidation" />
+
+    <!--
+      EF Core (solo la biblioteca base, no el proveedor de SQL Server). Permite declarar
+      IContextoRumbo con DbSet<T> y escribir consultas LINQ en los servicios de negocio.
+      No ata la capa a ninguna base de datos concreta: el proveedor lo elige Infraestructura.
+    -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
   </ItemGroup>
 
   <ItemGroup>

@@ -401,3 +401,70 @@ propio concedido únicamente al rol `Propietario`.
 **Por qué.** Un `Administrador` del hogar ya puede invitar gente y gestionar presupuestos, pero
 eso no implica que deba poder ver ni cambiar las credenciales del correo personal del
 propietario. Son dos niveles de confianza distintos y conviene no mezclarlos.
+
+---
+
+## D26 — Los servicios financieros viven en la capa de aplicación, con `IContextoRumbo`
+**Fecha:** 2026-09-20 · **Estado:** aceptada
+
+**Contexto.** Los servicios de autenticación están en Infraestructura por D16, porque dependen
+de Identity. Los financieros no tienen esa atadura: son lógica de negocio pura.
+
+**Decisión.** Viven en `Rumbo.Aplicacion/Modulos/`, contra una interfaz `IContextoRumbo` que
+expone los `DbSet` del dominio. La capa referencia `Microsoft.EntityFrameworkCore` (la
+biblioteca base, no el proveedor de SQL Server).
+
+**Por qué es aceptable esa dependencia.** EF Core base no ata a ninguna base de datos concreta;
+el proveedor lo elige Infraestructura. A cambio, los servicios escriben LINQ normal y la lógica
+financiera queda donde pertenece.
+
+**Lo que no cambia.** La implementación sigue siendo `ContextoRumbo`, así que los filtros
+globales por espacio, el borrado lógico y los interceptores se aplican igual. La interfaz no es
+una puerta trasera al aislamiento.
+
+---
+
+## D27 — Las transacciones se ejecutan a través de la estrategia de reintentos
+**Fecha:** 2026-09-20 · **Estado:** aceptada
+
+**Problema encontrado.** `IContextoRumbo` exponía `IniciarTransaccionAsync`. Al registrar el
+primer movimiento, la API devolvió 500: *«The configured execution strategy
+'SqlServerRetryingExecutionStrategy' does not support user-initiated transactions»*. Los
+reintentos ante fallos transitorios —imprescindibles en Azure SQL— son incompatibles con una
+transacción abierta a mano: si la conexión se corta a mitad, el reintento no sabría qué rehacer.
+
+**Decisión.** La interfaz expone **solo** `EjecutarEnTransaccionAsync(operación)`, que envuelve
+el trabajo en `CreateExecutionStrategy()`. Todo el bloque se reintenta como una unidad.
+
+**Por qué un método y no devolver la transacción.** Exponer únicamente esta forma hace
+imposible cometer el error: no hay manera de abrir una transacción suelta desde la capa de
+aplicación.
+
+---
+
+## D28 — La proyección a DTO es un árbol de expresiones, no un método
+**Fecha:** 2026-09-20 · **Estado:** aceptada
+
+**Problema encontrado.** `Proyectar(movimiento)` era un método estático usado dentro de
+`.Select(...)`. EF Core no puede traducir una llamada a método a SQL, así que la evaluó en
+cliente sobre entidades cuyas navegaciones no estaban cargadas: `NullReferenceException` al
+pedir el nombre de la cuenta. El compilador no avisa de nada.
+
+**Decisión.** La proyección se declara como
+`static readonly Expression<Func<Movimiento, MovimientoResumen>>`. Así la conversión ocurre
+dentro de la consulta y solo se traen las columnas necesarias.
+
+**Regla general.** Cualquier proyección usada en `.Select()` sobre un `IQueryable` debe ser una
+expresión, nunca un método.
+
+---
+
+## D29 — `ConsultasMovimientos` centraliza la regla de qué cuenta como gasto
+**Fecha:** 2026-09-20 · **Estado:** aceptada
+
+**Decisión.** Los filtros `SoloGastos()`, `SoloIngresos()` e `IngresosYGastos()` viven en un
+único sitio, y todo informe debe partir de ellos.
+
+**Por qué.** «Una transferencia no es un gasto» es la regla que más fácil se rompe: basta con
+que alguien escriba un informe nuevo y filtre a mano. Escrita una sola vez, olvidarla exige
+saltársela a propósito.

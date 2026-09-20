@@ -6,7 +6,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
+using Rumbo.Aplicacion.Calculadoras;
 using Rumbo.Aplicacion.Comun;
+using Rumbo.Aplicacion.Modulos.Categorias;
+using Rumbo.Aplicacion.Modulos.Cuentas;
+using Rumbo.Aplicacion.Modulos.Movimientos;
 using Microsoft.IdentityModel.Tokens;
 
 using Rumbo.Aplicacion.Contratos;
@@ -105,6 +109,11 @@ public static class InyeccionDependencias
         // y protegerlas con Key Vault.
         servicios.AddDataProtection();
 
+        // La capa de aplicacion trabaja contra la interfaz; se resuelve al MISMO contexto
+        // de la peticion, de modo que comparte transaccion y rastreador de cambios con los
+        // interceptores y con los servicios de infraestructura.
+        servicios.AddScoped<IContextoRumbo>(s => s.GetRequiredService<ContextoRumbo>());
+
         // --- Identidad --------------------------------------------------------
         servicios.AddIdentityCore<Usuario>(opciones =>
             {
@@ -143,6 +152,13 @@ public static class InyeccionDependencias
         servicios.AddScoped<IServicioAutenticacion, ServicioAutenticacion>();
         servicios.AddScoped<IServicioInvitaciones, ServicioInvitaciones>();
         servicios.AddScoped<IServicioEspacios, ServicioEspacios>();
+
+        // --- Servicios financieros (viven en la capa de aplicacion) -----------
+        servicios.AddScoped<ConversorMonedas>();
+        servicios.AddScoped<CalculadoraSaldos>();
+        servicios.AddScoped<IServicioCuentas, ServicioCuentas>();
+        servicios.AddScoped<IServicioCategorias, ServicioCategorias>();
+        servicios.AddScoped<IServicioMovimientos, ServicioMovimientos>();
 
         // --- Validacion del token en cada peticion -----------------------------
         var opcionesJwt = configuracion.GetSection(OpcionesJwt.Seccion).Get<OpcionesJwt>()

@@ -2,6 +2,8 @@ using System.Linq.Expressions;
 
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage;
 
 using Rumbo.Aplicacion.Comun;
 using Rumbo.Dominio;
@@ -46,7 +48,7 @@ namespace Rumbo.Infraestructura.Persistencia;
 public class ContextoRumbo(
     DbContextOptions<ContextoRumbo> opciones,
     IContextoEspacio contextoEspacio)
-    : IdentityDbContext<Usuario, Rol, Guid>(opciones)
+    : IdentityDbContext<Usuario, Rol, Guid>(opciones), IContextoRumbo
 {
     /// <summary>
     /// Espacio activo de la peticion, expuesto para que el filtro global pueda leerlo.
@@ -142,6 +144,33 @@ public class ContextoRumbo(
 
     /// <summary>Nombre del filtro global que oculta los registros borrados logicamente.</summary>
     public const string FiltroBorradoLogico = "FiltroBorradoLogico";
+
+    /// <inheritdoc />
+    public DatabaseFacade BaseDeDatos => Database;
+
+    // SaveChangesAsync no se declara aqui: el que hereda de DbContext ya cumple el
+    // contrato de IContextoRumbo, y redeclararlo solo ocultaria el original.
+
+    /// <inheritdoc />
+    public async Task<T> EjecutarEnTransaccionAsync<T>(
+        Func<CancellationToken, Task<T>> operacion,
+        CancellationToken cancelacion = default)
+    {
+        // La estrategia de reintentos envuelve TODO el bloque, de modo que si la conexion
+        // se corta a mitad, la operacion completa se rehace desde el principio.
+        var estrategia = Database.CreateExecutionStrategy();
+
+        return await estrategia.ExecuteAsync(async () =>
+        {
+            await using var transaccion = await Database.BeginTransactionAsync(cancelacion);
+
+            var resultado = await operacion(cancelacion);
+
+            await transaccion.CommitAsync(cancelacion);
+
+            return resultado;
+        });
+    }
 
     /// <summary>
     /// Convenciones que se aplican a TODO el modelo antes de las configuraciones por entidad.
