@@ -74,6 +74,20 @@ public static class Permisos
         public const string Escribir = "metas.escribir";
     }
 
+    /// <summary>Permisos sobre las sugerencias del motor de recomendaciones.</summary>
+    public static class Recomendaciones
+    {
+        /// <summary>Consultar sugerencias y pedir que se recalculen.</summary>
+        public const string Leer = "recomendaciones.leer";
+
+        /// <summary>Aceptar o descartar una sugerencia.</summary>
+        /// <remarks>
+        /// Responder no mueve dinero, pero deja constancia de una decision del hogar, por
+        /// eso se separa de la simple lectura.
+        /// </remarks>
+        public const string Responder = "recomendaciones.responder";
+    }
+
     /// <summary>Permisos sobre los viajes.</summary>
     public static class Viajes
     {

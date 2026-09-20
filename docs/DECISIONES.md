@@ -558,3 +558,77 @@ movimientos: alguien con `auditoria.leer` pero sin `movimientos.leer` vería el 
 
 El endpoint queda además reservado a quien administra el hogar: el historial revela los hábitos
 de cada persona, y no todos los miembros tienen por qué poder auditarse entre sí.
+
+
+---
+
+## D35 — Las partidas de un presupuesto se reemplazan en bloque
+**Fecha:** 2026-09-20 · **Estado:** aceptada
+
+**Contexto.** Al editar un presupuesto hay que decidir qué hacer con sus partidas: casarlas una
+a una con las existentes o sustituirlas todas.
+
+**Decisión.** `PUT /presupuestos/{id}` borra las partidas anteriores y crea las que llegan.
+
+**Por qué.** Una partida no guarda historial propio: el gasto real vive en los movimientos y se
+calcula por categoría y rango de fechas. Casarlas una a una añadiría código de reconciliación
+que no protege nada. Además se rechaza que una categoría aparezca dos veces: el consumo se
+compararía contra un límite ambiguo.
+
+---
+
+## D36 — Un presupuesto solo admite categorías de gasto
+**Fecha:** 2026-09-20 · **Estado:** aceptada
+
+**Decisión.** Una partida sobre una categoría de tipo `Ingreso` se rechaza con 400.
+
+**Por qué.** Un presupuesto limita gasto. «Presupuestar» un ingreso no significa nada, y el
+cálculo de consumo —gastado sobre asignado— daría siempre cero, con un aviso que nunca salta.
+Es mejor rechazarlo al crearlo que dejar una partida muerta en la pantalla.
+
+---
+
+## D37 — Aceptar una recomendación no mueve dinero
+**Fecha:** 2026-09-20 · **Estado:** aceptada
+
+**Contexto.** El endpoint natural de una sugerencia de aporte sería «aceptar y transferir».
+
+**Decisión.** `PUT /recomendaciones/{id}/respuesta` solo cambia el estado a `Aceptada` o
+`Descartada`. El aporte se registra después con `POST /metas/{id}/aportes`, donde la persona
+confirma cuenta, importe y fecha. Hay una prueba de integración que comprueba que tras aceptar
+una sugerencia ningún saldo cambió y no existe ni un solo movimiento.
+
+**Por qué.** Es el principio innegociable del proyecto: la aplicación no modifica dinero como
+consecuencia de una recomendación. Un sistema que transfiere por su cuenta, aunque acierte,
+deja de ser fiable el día que se equivoca.
+
+El aporte que nace de una sugerencia se marca con `OrigenRecomendacion`, lo que permite medir
+después si las recomendaciones sirven de algo sin que eso implique automatismo alguno.
+
+---
+
+## D38 — Al recalcular, las pendientes se sustituyen y las respondidas se conservan
+**Fecha:** 2026-09-20 · **Estado:** aceptada
+
+**Decisión.** `POST /recomendaciones/recalcular` borra las sugerencias en estado `Pendiente` y
+guarda las recién generadas. Las `Aceptada` y `Descartada` no se tocan.
+
+**Por qué.** Si se acumularan, en una semana habría veinte sugerencias contradictorias
+calculadas con datos distintos y ninguna sería de fiar. Y volver a proponer algo que la persona
+ya rechazó, cada vez que se recalcula, sería molesto: las respondidas son su historial de
+decisiones.
+
+Cada regla se ejecuta dentro de un `try`: si una falla, se registra el error y el motor sigue
+con las demás. Es preferible mostrar cuatro sugerencias de cinco que ninguna.
+
+---
+
+## D39 — Dos permisos para las recomendaciones: leer y responder
+**Fecha:** 2026-09-20 · **Estado:** aceptada
+
+**Decisión.** `recomendaciones.leer` (miembro) permite consultarlas y pedir un recálculo;
+`recomendaciones.responder` (administrador) permite aceptarlas o descartarlas.
+
+**Por qué.** Recalcular solo deriva datos que ya existen, así que cualquier miembro puede
+hacerlo. Responder, en cambio, deja constancia de una decisión del hogar sobre su plan de
+ahorro, y eso encaja con el mismo criterio que ya separa `metas.leer` de `metas.escribir`.

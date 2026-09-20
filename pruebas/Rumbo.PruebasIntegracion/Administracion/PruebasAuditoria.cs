@@ -48,12 +48,19 @@ public class PruebasAuditoria(FabricaApiDePrueba fabrica) : IClassFixture<Fabric
         await AyudanteFinanciero.RegistrarAsync(
             cliente, "Gasto", cuenta.Id, categoria.Id, 7_777m, "Importe reconocible");
 
-        var respuesta = await cliente.GetAsync("/api/v1/auditoria");
-        respuesta.EnsureSuccessStatusCode();
+        var historial = await cliente.GetFromJsonAsync<ResultadoPaginado<EntradaAuditoria>>(
+            "/api/v1/auditoria");
 
-        var cuerpo = await respuesta.Content.ReadAsStringAsync();
+        Assert.NotEmpty(historial!.Elementos);
 
-        Assert.DoesNotContain("7777", cuerpo, StringComparison.Ordinal);
+        // Se revisan los campos de texto, no el cuerpo entero: un identificador GUID es
+        // hexadecimal y puede contener «7777» por casualidad, lo que haría fallar la prueba
+        // un día de cada tantos sin que nada estuviera mal.
+        var textos = historial.Elementos
+            .SelectMany(e => new[] { e.Accion, e.TipoEntidad, e.Descripcion, e.CorreoUsuario })
+            .Where(t => t is not null);
+
+        Assert.All(textos, t => Assert.DoesNotContain("7777", t!, StringComparison.Ordinal));
     }
 
     [Fact]

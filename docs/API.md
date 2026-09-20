@@ -248,3 +248,92 @@ un mes ya cerrado no cambia de resultado si mañana se mueve el tipo de cambio.
 Si falta la tasa exacta se usa la anterior más cercana y el movimiento queda marcado con
 `tasaEsAproximada: true`. Si no hay ninguna, la operación se rechaza con un mensaje claro:
 inventar una paridad produciría un importe plausible y falso.
+
+
+## Presupuestos
+
+| Ruta | Permiso | Qué hace |
+|---|---|---|
+| `GET /presupuestos?soloVigente=` | `presupuestos.leer` | Lista con el consumo de cada partida |
+| `GET /presupuestos/{id}` | `presupuestos.leer` | Un presupuesto con sus partidas |
+| `POST /presupuestos` | `presupuestos.escribir` | Crea uno con sus partidas |
+| `PUT /presupuestos/{id}` | `presupuestos.escribir` | Modifica y **reemplaza** las partidas |
+| `DELETE /presupuestos/{id}` | `presupuestos.escribir` | Elimina el presupuesto |
+
+Un presupuesto **no impide gastar**: compara lo planificado con lo realmente gastado y avisa.
+El consumo sale siempre del libro mayor —movimientos de esa categoría dentro del período—,
+nunca de un contador aparte que pudiera desincronizarse.
+
+Cada partida devuelve `montoGastado`, `montoDisponible`, `porcentajeConsumido`, un `nivel`
+(`Normal`, `Aviso`, `Critico`, `Excedido`) según sus umbrales, el `ritmoDiarioNecesario` con lo
+que queda y la `proyeccionAlCierre` si se mantiene el ritmo actual.
+
+Los umbrales se toman de la configuración del espacio (80 / 90 / 100 por omisión) y se pueden
+sobrescribir partida a partida.
+
+Reglas de validación: al menos una partida; ninguna categoría repetida —el consumo se
+compararía contra un límite ambiguo—; solo categorías de **gasto**; y umbrales ordenados
+(aviso ≤ crítico ≤ excedido).
+
+Una **transferencia nunca consume presupuesto**: mover dinero entre cuentas propias no es
+gastar.
+
+## Metas de ahorro
+
+| Ruta | Permiso | Qué hace |
+|---|---|---|
+| `GET /metas?incluirCerradas=` | `metas.leer` | Lista con la proyección de cada meta |
+| `GET /metas/{id}` | `metas.leer` | Una meta |
+| `POST /metas` | `metas.escribir` | Crea una meta |
+| `PUT /metas/{id}` | `metas.escribir` | Modifica una meta |
+| `PUT /metas/{id}/estado` | `metas.escribir` | Activa, pausa, alcanza o cancela |
+| `DELETE /metas/{id}` | `metas.escribir` | Elimina una meta **sin aportes** |
+| `GET /metas/{id}/aportes` | `metas.leer` | Historial de aportes |
+| `POST /metas/{id}/aportes` | `metas.escribir` | Aporta desde una cuenta |
+
+Una meta **no guarda dinero**: el dinero vive en la cuenta vinculada. La meta dice cuánto se
+quiere reunir y para cuándo, y el sistema calcula el ritmo.
+
+`aporteMensualNecesario` = *(objetivo − reunido) ÷ meses completos que faltan*. Con el ejemplo
+de referencia: RD$180,000 de objetivo, RD$30,000 reunidos y 15 meses por delante → faltan
+RD$150,000 y hacen falta **RD$10,000 al mes**. El semanal se calcula sobre los días reales, no
+dividiendo el mensual entre cuatro: un mes no tiene cuatro semanas.
+
+`vaAtrasada` compara el aporte necesario con el que la persona se comprometió a hacer: si el
+necesario es mayor, al ritmo prometido no llegaría.
+
+**Un aporte es una transferencia, no un gasto.** Sale de la cuenta de origen y entra en la
+cuenta de ahorro de la meta, con los dos asientos, en una sola transacción. Contarlo como gasto
+haría que ahorrar pareciera empobrecer.
+
+Una meta **sin cuenta vinculada no admite aportes**: el acumulado subiría sin que ningún saldo
+bajara, y el hogar creería tener ese dinero dos veces.
+
+Una meta **con aportes no se elimina** —esos movimientos existen y apuntan a ella—; se cancela,
+lo que la retira de la vista conservando el historial.
+
+## Recomendaciones
+
+| Ruta | Permiso | Qué hace |
+|---|---|---|
+| `GET /recomendaciones?incluirRespondidas=` | `recomendaciones.leer` | Sugerencias vigentes |
+| `POST /recomendaciones/recalcular` | `recomendaciones.leer` | Recalcula con los datos de hoy |
+| `PUT /recomendaciones/{id}/respuesta` | `recomendaciones.responder` | Acepta o descarta |
+
+El motor es **determinista**: reglas y aritmética, sin inteligencia artificial. Dos ejecuciones
+con los mismos datos dan el mismo resultado, y cada sugerencia guarda en `insumos` los datos y
+la fórmula con los que se calculó, para poder responder de dónde sale el número.
+
+**Ninguna recomendación mueve dinero.** Aceptar una deja constancia de la decisión; el aporte se
+registra después con `POST /metas/{id}/aportes`, que la persona confirma. El sistema nunca
+transfiere por su cuenta.
+
+Al recalcular, las pendientes se sustituyen y las ya respondidas se conservan. Si una regla
+falla, se registra el error y el motor continúa con las demás.
+
+Con menos de tres meses de historial la sugerencia llega con `confianzaBaja: true`: la
+aplicación debe presentarla como estimación, no como dato.
+
+Reglas activas hoy: **aporte mensual para una meta** (cuánto haría falta apartar al mes y si el
+flujo de caja lo permite) y **alerta de presupuesto** (una partida que va camino de excederse
+antes de que acabe el período).

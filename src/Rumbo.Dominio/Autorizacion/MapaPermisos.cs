@@ -35,6 +35,7 @@ public static class MapaPermisos
         Permisos.Viajes.Leer,
         Permisos.Deudas.Leer,
         Permisos.Reportes.Leer,
+        Permisos.Recomendaciones.Leer,
         Permisos.Espacio.Leer,
     ];
 
@@ -53,6 +54,7 @@ public static class MapaPermisos
         Permisos.Viajes.Escribir,
         Permisos.Deudas.Escribir,
         Permisos.Espacio.Escribir,
+        Permisos.Recomendaciones.Responder,
         Permisos.Espacio.Invitar,
         Permisos.Espacio.GestionarMiembros,
         Permisos.Auditoria.Leer,

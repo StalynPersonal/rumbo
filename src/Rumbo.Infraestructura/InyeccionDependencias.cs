@@ -12,7 +12,12 @@ using Rumbo.Aplicacion.Modulos.Categorias;
 using Rumbo.Aplicacion.Modulos.Cuentas;
 using Rumbo.Aplicacion.Modulos.Monedas;
 using Rumbo.Aplicacion.Modulos.Movimientos;
+using Rumbo.Aplicacion.Modulos.Metas;
+using Rumbo.Aplicacion.Modulos.Presupuestos;
+using Rumbo.Aplicacion.Modulos.Recomendaciones;
 using Rumbo.Aplicacion.Modulos.Recurrentes;
+using Rumbo.Aplicacion.Recomendaciones;
+using Rumbo.Aplicacion.Recomendaciones.Reglas;
 using Microsoft.IdentityModel.Tokens;
 
 using Rumbo.Aplicacion.Contratos;
@@ -166,6 +171,19 @@ public static class InyeccionDependencias
         servicios.AddScoped<IServicioMovimientos, ServicioMovimientos>();
         servicios.AddScoped<IServicioMonedas, ServicioMonedas>();
         servicios.AddScoped<IServicioRecurrentes, ServicioRecurrentes>();
+
+        // --- Planificacion: presupuestos, metas y sugerencias -----------------
+        servicios.AddScoped<AnalizadorFlujoCaja>();
+        servicios.AddScoped<IServicioPresupuestos, ServicioPresupuestos>();
+        servicios.AddScoped<IServicioMetas, ServicioMetas>();
+
+        // Las reglas se registran como una coleccion: el motor las recibe todas y las
+        // ejecuta por orden de prioridad. Anadir una regla nueva es anadir una linea aqui,
+        // sin tocar el motor.
+        servicios.AddScoped<IReglaRecomendacion, ReglaAporteMensualParaMeta>();
+        servicios.AddScoped<IReglaRecomendacion, ReglaAlertaDePresupuesto>();
+        servicios.AddScoped<MotorRecomendaciones>();
+        servicios.AddScoped<IServicioRecomendaciones, ServicioRecomendaciones>();
 
         // --- Validacion del token en cada peticion -----------------------------
         var opcionesJwt = configuracion.GetSection(OpcionesJwt.Seccion).Get<OpcionesJwt>()
