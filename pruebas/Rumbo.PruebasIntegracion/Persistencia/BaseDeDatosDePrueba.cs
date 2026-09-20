@@ -19,12 +19,15 @@ namespace Rumbo.PruebasIntegracion.Persistencia;
 /// </remarks>
 public sealed class BaseDeDatosDePrueba : IAsyncDisposable
 {
+    /// <summary>Prefijo obligatorio de toda base de datos creada por las pruebas.</summary>
+    public const string PrefijoBaseDePruebas = "RumboPruebas_";
+
     private readonly string _nombreBase;
 
     /// <summary>Crea una base de datos vacia con un nombre unico.</summary>
     public BaseDeDatosDePrueba()
     {
-        _nombreBase = "RumboPruebas_" + Guid.NewGuid().ToString("N")[..12];
+        _nombreBase = PrefijoBaseDePruebas + Guid.NewGuid().ToString("N")[..12];
     }
 
     /// <summary>Cadena de conexion a la base de datos de la prueba.</summary>
@@ -101,6 +104,14 @@ public sealed class BaseDeDatosDePrueba : IAsyncDisposable
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
+        // Misma red de seguridad que en FabricaApiDePrueba: nunca borrar una base que no
+        // sea de pruebas.
+        if (!_nombreBase.StartsWith(PrefijoBaseDePruebas, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"Se iba a borrar la base de datos '{_nombreBase}', que no es de pruebas.");
+        }
+
         await using var contexto = CrearContexto(espacioActivo: null);
         await contexto.Database.EnsureDeletedAsync();
     }

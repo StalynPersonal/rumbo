@@ -1,6 +1,8 @@
 using System.Reflection;
 
 using Rumbo.Api.Extensiones;
+using Rumbo.Infraestructura.MultiEspacio;
+using Rumbo.Infraestructura.Persistencia.Semilla;
 
 // ---------------------------------------------------------------------------
 //  Punto de entrada de la API de Rumbo.
@@ -20,8 +22,17 @@ constructor.Services.AgregarServiciosDeApi(constructor.Configuration);
 
 var aplicacion = constructor.Build();
 
+// Roles de plataforma y primer administrador. Sin el, nadie podria emitir la primera
+// invitacion y el sistema quedaria inaccesible, porque Rumbo no tiene registro publico.
+await SembradorInicial.SembrarAsync(aplicacion.Services);
+
 // --- Tuberia de peticiones (middleware) ------------------------------------
 // El ORDEN importa: cada middleware envuelve a los siguientes.
+
+// El manejador de excepciones va PRIMERO: envuelve a todos los que vienen despues, de modo
+// que cualquier fallo, venga de donde venga, sale como ProblemDetails y nunca como una
+// traza de pila.
+aplicacion.UseExceptionHandler();
 
 if (aplicacion.Environment.IsDevelopment() || aplicacion.Environment.IsStaging())
 {
@@ -37,6 +48,14 @@ if (aplicacion.Environment.IsDevelopment() || aplicacion.Environment.IsStaging()
 }
 
 aplicacion.UseHttpsRedirection();
+
+// Orden obligatorio: primero se comprueba QUIEN es (autenticacion), despues sobre QUE
+// espacio opera (resolucion), y solo entonces si PUEDE hacerlo (autorizacion). El middleware
+// de espacio tiene que ir en medio, porque la autorizacion por permisos necesita el rol que
+// el verifica contra la base de datos.
+aplicacion.UseAuthentication();
+aplicacion.UseMiddleware<MiddlewareResolucionEspacio>();
+aplicacion.UseAuthorization();
 
 aplicacion.MapControllers();
 

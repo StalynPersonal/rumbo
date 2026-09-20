@@ -236,3 +236,66 @@ compilaba después de generar la primera.
 
 **Alternativa descartada.** Editar a mano cada migración para adaptarla al estilo: se
 regeneran, así que el arreglo se perdería en la siguiente.
+
+---
+
+## D16 — El servicio de autenticación vive en Infraestructura
+**Fecha:** 2026-09-20 · **Estado:** aceptada
+
+**Contexto.** `ServicioAutenticacion` necesita `UserManager<Usuario>`, y `Usuario` hereda de
+`IdentityUser<Guid>`, que está en Infraestructura por D11.
+
+**Decisión.** La *interfaz* `IServicioAutenticacion` está en `Rumbo.Aplicacion/Contratos`;
+la implementación, en `Rumbo.Infraestructura/Identidad`. Los controladores dependen de la
+interfaz, nunca de la clase.
+
+**Por qué no forzarlo a Aplicación.** Habría exigido una abstracción propia sobre Identity
+—un `IGestorUsuarios` que replicara su API— que solo serviría para satisfacer una regla, sin
+ninguna ventaja práctica.
+
+---
+
+## D17 — Los permisos se incrustan en el token; la membresía se verifica en cada petición
+**Fecha:** 2026-09-20 · **Estado:** aceptada
+
+**Decisión.** El JWT lleva los permisos del rol, pero el middleware **consulta la base de
+datos en cada petición** para confirmar que la membresía sigue activa (con caché de 30 s).
+
+**El equilibrio.** Si todo se leyera del token, expulsar a alguien no surtiría efecto hasta
+que caducara (15 minutos). Si todo se consultara, cada comprobación de permiso costaría una
+consulta. La solución intermedia: un **cambio de rol** tarda como mucho 15 minutos en
+aplicarse, pero **revocar el acceso por completo** es prácticamente inmediato. Se optimiza el
+caso que importa: echar a alguien del hogar.
+
+---
+
+## D18 — Las pruebas nunca pueden borrar una base que no sea de pruebas
+**Fecha:** 2026-09-20 · **Estado:** aceptada
+
+**Contexto.** La primera versión de `FabricaApiDePrueba` configuraba la cadena de conexión
+con `ConfigureAppConfiguration`. Con el hospedaje mínimo de .NET, esa fuente quedó **por
+debajo** de `appsettings.Development.json`, así que las pruebas apuntaron a la base de
+desarrollo, y `EnsureDeletedAsync` **borró la base `Rumbo` real**.
+
+**Decisión.** Dos medidas, no una:
+
+1. La configuración de prueba se aplica con `UseSetting`, que escribe en la configuración del
+   host y sí tiene precedencia.
+2. Antes de borrar nada, se comprueba que el nombre de la base empiece por el prefijo de
+   pruebas (`RumboApi_` o `RumboPruebas_`). Si no, se lanza una excepción y **no se borra**.
+
+**Por qué las dos.** La primera arregla la causa; la segunda impide que un fallo equivalente
+—otra librería, otro orden de configuración, un descuido futuro— vuelva a destruir datos. Una
+guarda de tres líneas frente a una pérdida irreversible es un intercambio evidente.
+
+---
+
+## D19 — Sin holgura de reloj en la validación del JWT
+**Fecha:** 2026-09-20 · **Estado:** aceptada
+
+**Decisión.** `ClockSkew = TimeSpan.Zero`.
+
+**Por qué.** El valor por defecto son 5 minutos, pensados para servidores con relojes
+desincronizados. Sobre un token de 15 minutos, eso alarga su vida útil un tercio. Cliente y
+servidor sincronizan por NTP, así que la holgura no aporta nada y solo amplía la ventana de
+un token robado.

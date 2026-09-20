@@ -1,3 +1,7 @@
+using Microsoft.AspNetCore.Authorization;
+
+using Rumbo.Api.Autorizacion;
+using Rumbo.Api.Middleware;
 using Rumbo.Infraestructura;
 
 namespace Rumbo.Api.Extensiones;
@@ -27,6 +31,15 @@ public static class ExtensionesServicios
         servicios.AgregarInfraestructura(configuracion);
 
         servicios.AddControllers();
+
+        // --- Autorizacion por permiso ------------------------------------------
+        // El proveedor construye al vuelo una politica por cada permiso que se use, de modo
+        // que anadir un permiso nuevo no obliga a registrar nada aqui.
+        servicios.AddSingleton<IAuthorizationPolicyProvider, ProveedorPoliticasPermiso>();
+        servicios.AddScoped<IAuthorizationHandler, ManejadorPermisos>();
+
+        // --- Errores en formato ProblemDetails ----------------------------------
+        servicios.AddExceptionHandler<ManejadorExcepcionesGlobal>();
 
         // Generacion del documento OpenAPI, incluida en ASP.NET Core desde .NET 9.
         servicios.AddOpenApi();

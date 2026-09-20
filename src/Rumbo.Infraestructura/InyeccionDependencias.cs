@@ -1,9 +1,16 @@
+using System.Text;
+
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 using Rumbo.Aplicacion.Comun;
+using Microsoft.IdentityModel.Tokens;
+
+using Rumbo.Aplicacion.Contratos;
+using Rumbo.Infraestructura.Correo;
 using Rumbo.Infraestructura.Identidad;
 using Rumbo.Infraestructura.MultiEspacio;
 using Rumbo.Infraestructura.Persistencia;
@@ -120,6 +127,57 @@ public static class InyeccionDependencias
             .AddRoles<Rol>()
             .AddEntityFrameworkStores<ContextoRumbo>()
             .AddDefaultTokenProviders();
+
+        // --- Opciones tipadas -------------------------------------------------
+        servicios.Configure<OpcionesJwt>(configuracion.GetSection(OpcionesJwt.Seccion));
+        servicios.Configure<OpcionesCorreo>(configuracion.GetSection(OpcionesCorreo.Seccion));
+
+        // --- Servicios propios ------------------------------------------------
+        servicios.AddMemoryCache();
+        servicios.AddScoped<IServicioTokens, ServicioTokensJwt>();
+        servicios.AddScoped<IEnviadorCorreo, EnviadorCorreoSmtp>();
+        servicios.AddScoped<IServicioAutenticacion, ServicioAutenticacion>();
+        servicios.AddScoped<IServicioInvitaciones, ServicioInvitaciones>();
+
+        // --- Validacion del token en cada peticion -----------------------------
+        var opcionesJwt = configuracion.GetSection(OpcionesJwt.Seccion).Get<OpcionesJwt>()
+            ?? new OpcionesJwt();
+
+        if (string.IsNullOrWhiteSpace(opcionesJwt.ClaveFirma) || opcionesJwt.ClaveFirma.Length < 32)
+        {
+            // Se falla al arrancar y no en el primer inicio de sesion. Una clave corta o
+            // ausente haria que los tokens fueran falsificables, y eso no puede depender de
+            // que alguien se de cuenta al probar.
+            throw new InvalidOperationException(
+                "Falta la clave de firma de los tokens (Jwt:ClaveFirma) o tiene menos de 32 "
+                + "caracteres. En desarrollo se configura con 'dotnet user-secrets set "
+                + "\"Jwt:ClaveFirma\" \"...\"'; en produccion, en Azure Key Vault.");
+        }
+
+        servicios.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            .AddJwtBearer(opciones =>
+            {
+                opciones.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidIssuer = opcionesJwt.Emisor,
+
+                    ValidateAudience = true,
+                    ValidAudience = opcionesJwt.Audiencia,
+
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(
+                        Encoding.UTF8.GetBytes(opcionesJwt.ClaveFirma)),
+
+                    ValidateLifetime = true,
+
+                    // Sin holgura de reloj. El valor por defecto son 5 minutos, que
+                    // alargarian en un tercio la vida util de un token de 15 minutos.
+                    ClockSkew = TimeSpan.Zero,
+                };
+            });
+
+        servicios.AddAuthorization();
 
         return servicios;
     }
