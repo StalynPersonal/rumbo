@@ -6,6 +6,10 @@
   -->
 
   <ItemGroup>
+    <PackageReference Include="FluentValidation" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Rumbo.Dominio\Rumbo.Dominio.csproj" />
     <ProjectReference Include="..\Rumbo.Contratos\Rumbo.Contratos.csproj" />
   </ItemGroup>

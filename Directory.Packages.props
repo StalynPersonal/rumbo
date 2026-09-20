@@ -16,6 +16,18 @@
     <PackageVersion Include="Swashbuckle.AspNetCore.SwaggerUI" Version="10.2.3" />
   </ItemGroup>
 
+  <ItemGroup Label="Autenticacion y validacion">
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.12" />
+    <PackageVersion Include="FluentValidation" Version="12.1.1" />
+    <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
+  </ItemGroup>
+
+  <ItemGroup Label="Correo">
+    <!-- MailKit y no System.Net.Mail.SmtpClient: la documentacion de .NET desaconseja este
+         ultimo para codigo nuevo porque no soporta bien STARTTLS moderno ni OAuth2. -->
+    <PackageVersion Include="MailKit" Version="4.18.0" />
+  </ItemGroup>
+
   <ItemGroup Label="Persistencia e identidad">
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.12" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.12" />

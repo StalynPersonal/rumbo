@@ -16,7 +16,7 @@ var constructor = WebApplication.CreateBuilder(args);
 
 // --- Servicios (inyeccion de dependencias) ---------------------------------
 
-constructor.Services.AgregarServiciosDeApi();
+constructor.Services.AgregarServiciosDeApi(constructor.Configuration);
 
 var aplicacion = constructor.Build();
 

@@ -86,6 +86,18 @@ public static class InyeccionDependencias
                 proveedor.GetRequiredService<InterceptorAuditoria>());
         });
 
+        // --- Proteccion de datos ---------------------------------------------
+        // Los proveedores de token de Identity (restablecer clave, confirmar correo) cifran
+        // esos tokens con Data Protection, asi que hay que registrarla explicitamente:
+        // AddIdentityCore no lo hace por su cuenta.
+        //
+        // ATENCION para la Fase 10: por defecto las claves se guardan en el sistema de
+        // ficheros local. En Azure App Service eso significa que se pierden al reiniciar y
+        // que no se comparten entre instancias, de modo que un enlace de "olvide mi clave"
+        // dejaria de funcionar sin motivo aparente. Alli hay que persistirlas en Blob Storage
+        // y protegerlas con Key Vault.
+        servicios.AddDataProtection();
+
         // --- Identidad --------------------------------------------------------
         servicios.AddIdentityCore<Usuario>(opciones =>
             {
