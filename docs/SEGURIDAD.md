@@ -153,7 +153,49 @@ dotnet user-secrets set "Rumbo:AdministradorInicial:Clave" "<contraseña fuerte>
 Para SMTP, usa siempre una **contraseña de aplicación** dedicada, nunca la principal de la
 cuenta de correo: si se filtra, se revoca sin tocar nada más.
 
-## 6. Registro de auditoría
+## 6. Servidores de correo
+
+Hay **dos niveles**, y ambos se configuran desde la aplicación:
+
+| Nivel | Quién lo configura | Qué envía |
+|---|---|---|
+| **Plataforma** | `AdministradorPlataforma`, en `/api/v1/administracion/correo` | Invitación a un futuro propietario y restablecimiento de contraseña |
+| **Espacio** | El **propietario**, en `/api/v1/espacios/actual/correo` | Invitaciones a miembros y avisos de ese hogar |
+
+**Por qué hacen falta los dos.** Hay dos correos que no tienen espacio del que sacar
+credenciales: la invitación a un propietario se envía *antes* de que su espacio exista, y el
+restablecimiento de contraseña pertenece a la persona, que puede estar en varios hogares.
+
+Orden de preferencia al enviar: servidor del espacio → servidor de plataforma → `appsettings`
+(solo para el arranque inicial, antes de que haya nada en la base de datos). Si un espacio no
+tiene servidor propio, su correo sale por el de plataforma: es preferible que llegue desde una
+dirección genérica a que no llegue.
+
+### Protección de las credenciales
+
+Aquí no se guarda una credencial del sistema, sino **la contraseña del correo personal de
+alguien**. En texto plano, quien leyera la base de datos se llevaría una cuenta de correo
+ajena, no solo información financiera.
+
+| Medida | Detalle |
+|---|---|
+| Cifrado en reposo | Data Protection con un propósito aislado (`Rumbo.Correo.CredencialesSmtp.v1`) |
+| Cifrado, no hash | A diferencia de las contraseñas de acceso, esta hay que **recuperarla** para autenticarse contra el servidor. Hashearla la inutilizaría |
+| Nunca se devuelve | Ningún endpoint la expone, ni siquiera a quien la puso. Solo se informa de `ClaveConfigurada: true/false` |
+| Guardar sin contraseña la conserva | Permite cambiar el puerto sin reescribirla, algo imposible si la API no la devuelve |
+| Fuera de los registros | Se registra el destinatario, el asunto y de qué servidor salió; nunca el cuerpo ni la credencial |
+| Permiso propio | `espacio.configurar_correo`, concedido **solo al Propietario**. Ni un Administrador del hogar puede tocarlo |
+
+Lo verifica `LaContrasenaSmtpNuncaSeDevuelvePorLaApi`, que revisa el **JSON en crudo** y no el
+objeto deserializado: si la contraseña se colara en un campo que el DTO no declara, el objeto
+no la mostraría pero la respuesta sí la llevaría.
+
+Se recomienda usar siempre una **contraseña de aplicación** dedicada, no la principal de la
+cuenta: si se filtra, se revoca sin tocar nada más. El endpoint `POST .../correo/probar`
+comprueba la conexión antes de confiar en ella, y distingue el fallo de autenticación —que casi
+siempre significa haber usado la contraseña normal en vez de una de aplicación— del resto.
+
+## 7. Registro de auditoría
 
 `InterceptorAuditoria` escribe el historial automáticamente al guardar cambios. Se hace en un
 interceptor y no en cada servicio a propósito: si dependiera de que alguien se acuerde de
@@ -163,7 +205,7 @@ que son las que más interesa auditar.
 **Nunca se registran** contraseñas, hashes de token ni códigos de invitación. La lista de
 campos redactados está en `PropiedadesSensibles`.
 
-## 7. Errores
+## 8. Errores
 
 Todos salen como `ProblemDetails` (RFC 9457) con un `traceId`.
 
@@ -174,9 +216,9 @@ devuelve un mensaje genérico y el detalle queda solo en los registros del servi
 Las excepciones de dominio sí muestran su mensaje, porque están escritas para que las lea la
 persona: «El código de invitación ha caducado».
 
-## 8. Cobertura de pruebas de seguridad
+## 9. Cobertura de pruebas de seguridad
 
-De las 53 pruebas automáticas, estas verifican seguridad directamente:
+De las 72 pruebas automáticas, estas verifican seguridad directamente:
 
 | Prueba | Verifica |
 |---|---|
@@ -185,12 +227,14 @@ De las 53 pruebas automáticas, estas verifican seguridad directamente:
 | `PruebasSesion` (6) | Mensajes indistinguibles, rotación, detección de robo, cierre de sesión |
 | `PruebasFlujoDeAlta` (5) | Sin invitación no se entra; código de un solo uso y ligado a un correo |
 | `PruebasCoberturaDeAislamiento` (4) | Ninguna entidad de negocio se queda sin aislamiento |
+| `PruebasGestionDeEspacio` (10) | Reglas que impiden dejar un hogar sin propietario o bloqueado |
+| `PruebasConfiguracionCorreo` (9) | La contraseña SMTP nunca sale por la API; aislamiento entre espacios |
 
-## 9. Pendiente
+## 10. Pendiente
 
 | Tarea | Fase | Riesgo si se olvida |
 |---|---|---|
-| Persistir las claves de Data Protection en Blob Storage | 10 | Los enlaces de «olvidé mi clave» dejarían de funcionar al reiniciar o al escalar |
+| Persistir las claves de Data Protection en Blob Storage | 10 | **Crítico.** Además de romper los enlaces de «olvidé mi clave», las contraseñas SMTP guardadas dejarían de poder descifrarse al reiniciar, y habría que volver a introducirlas |
 | Límite de peticiones (rate limiting) | 9 | Fuerza bruta distribuida sobre el inicio de sesión |
 | Cabeceras de seguridad (HSTS, CSP, X-Content-Type-Options) | 9 | |
 | SPF y DKIM del dominio remitente | 10 | Los correos de invitación acabarían en spam |

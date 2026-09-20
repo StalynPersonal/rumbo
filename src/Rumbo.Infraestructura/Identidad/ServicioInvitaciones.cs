@@ -97,7 +97,10 @@ public partial class ServicioInvitaciones(
         var (asunto, cuerpo) = PlantillasCorreo.InvitacionPropietario(
             invitacion.NombreEspacioPropuesto!, codigo, _correo.UrlBase, DiasValidez);
 
-        var enviado = await enviadorCorreo.EnviarAsync(correoNormalizado, asunto, cuerpo, cancelacion);
+        // Sin espacio: el hogar todavia no existe, asi que sale por el servidor de
+        // plataforma.
+        var enviado = await enviadorCorreo.EnviarAsync(
+            correoNormalizado, asunto, cuerpo, espacioId: null, cancelacion);
 
         registro.LogInformation(
             "Invitación de propietario creada para {Correo}. Correo enviado: {Enviado}.",

@@ -27,6 +27,7 @@ public class PruebasCoberturaDeAislamiento
         ["Moneda"] = "Catalogo global ISO-4217, identico para todos los espacios.",
         ["TasaCambio"] = "Las tasas de cambio son datos publicos, no de un hogar concreto.",
         ["RegistroAuditoria"] = "Registra tambien acciones sin espacio (inicios de sesion, gestion de plataforma); el aislamiento se aplica de forma explicita al consultarlo.",
+        ["ConfiguracionCorreoPlataforma"] = "Es el servidor SMTP de la plataforma, una unica fila para todo el sistema. Envia lo que no pertenece a ningun hogar: la invitacion a un futuro propietario, cuyo espacio aun no existe, y el restablecimiento de contrasena, que pertenece a la persona.",
     };
 
     /// <summary>
@@ -35,6 +36,7 @@ public class PruebasCoberturaDeAislamiento
     private static readonly Dictionary<string, string> SinBorradoLogicoJustificado = new()
     {
         ["ConfiguracionEspacio"] = "No contiene datos financieros, solo preferencias. Es 1 a 1 con el espacio y desaparece con el; conservar una configuracion huerfana marcada como borrada no aportaria nada a la auditoria.",
+        ["ConfiguracionCorreoEspacio"] = "Son credenciales de conexion, no datos financieros. Al quitarlas hay que borrarlas de verdad: conservar una contrasena SMTP marcada como eliminada seria guardar un secreto que ya nadie quiere que exista.",
     };
 
     private static IEnumerable<Type> EntidadesDelDominio() =>

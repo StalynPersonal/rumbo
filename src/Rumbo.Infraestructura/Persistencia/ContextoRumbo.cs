@@ -129,6 +129,14 @@ public class ContextoRumbo(
     /// <summary>Sugerencias del motor de recomendaciones.</summary>
     public DbSet<Recomendacion> Recomendaciones => Set<Recomendacion>();
 
+    /// <summary>Servidor SMTP de la plataforma. Tabla global de una sola fila.</summary>
+    public DbSet<ConfiguracionCorreoPlataforma> ConfiguracionCorreoPlataforma =>
+        Set<ConfiguracionCorreoPlataforma>();
+
+    /// <summary>Servidor SMTP propio de cada espacio.</summary>
+    public DbSet<ConfiguracionCorreoEspacio> ConfiguracionesCorreoEspacio =>
+        Set<ConfiguracionCorreoEspacio>();
+
     /// <summary>Nombre del filtro global que aisla los datos por espacio.</summary>
     public const string FiltroEspacio = "FiltroEspacio";
 

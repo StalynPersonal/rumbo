@@ -348,3 +348,56 @@ entre la invitación y el registro. Se detectó probando el flujo a mano.
 
 **Decisión.** `Invitacion.TipoEspacioPropuesto` persiste la elección, y el alta la respeta.
 Migración `AgregarTipoEspacioPropuestoAInvitacion`.
+
+---
+
+## D23 — Dos niveles de servidor SMTP, ambos configurables desde la aplicación
+**Fecha:** 2026-09-20 · **Estado:** aceptada
+
+**Contexto.** El usuario pidió que cada propietario de espacio pueda usar su propio correo con
+sus credenciales, y que el de plataforma también sea editable.
+
+**Decisión.** Dos tablas: `ConfiguracionCorreoPlataforma` (global, una fila) y
+`ConfiguracionCorreoEspacio` (una por espacio). Orden de preferencia al enviar: espacio →
+plataforma → `appsettings`.
+
+**Por qué sigue haciendo falta el de plataforma.** Dos correos no tienen espacio del que sacar
+credenciales: la invitación a un futuro propietario, que se envía *antes* de que su espacio
+exista, y el restablecimiento de contraseña, que pertenece a la persona y no a un hogar —
+alguien puede estar en varios. Sin un servidor de plataforma, nadie podría darse de alta ni
+recuperar su cuenta.
+
+**Por qué `appsettings` se mantiene como último recurso.** Es el arranque en frío: permite
+enviar la primera invitación cuando la base de datos todavía no tiene ninguna configuración.
+
+---
+
+## D24 — Las contraseñas SMTP se cifran, no se hashean
+**Fecha:** 2026-09-20 · **Estado:** aceptada
+
+**Decisión.** `IProtectorSecretos` cifra de forma reversible con Data Protection, bajo un
+propósito aislado.
+
+**Por qué no hash.** Es el error conceptual fácil de cometer aquí. Una contraseña de acceso se
+hashea porque solo hace falta *comprobarla*. Una credencial SMTP hay que **recuperarla en
+claro** para autenticarse contra el servidor de correo: hashearla la inutilizaría.
+
+**Por qué importa cifrarla.** No es una credencial del sistema, es la contraseña del correo
+personal de un usuario. En texto plano, cualquiera con acceso de lectura a la base de datos se
+llevaría una cuenta de correo ajena.
+
+**Consecuencia para la Fase 10.** Las claves de Data Protection pasan de «conveniente» a
+**crítico**: si se pierden al reiniciar App Service, las contraseñas SMTP guardadas dejan de
+poder descifrarse. Deben persistirse en Blob Storage y protegerse con Key Vault.
+
+---
+
+## D25 — `espacio.configurar_correo` es un permiso aparte, solo del Propietario
+**Fecha:** 2026-09-20 · **Estado:** aceptada
+
+**Decisión.** Configurar el correo del espacio no usa `espacio.escribir`, sino un permiso
+propio concedido únicamente al rol `Propietario`.
+
+**Por qué.** Un `Administrador` del hogar ya puede invitar gente y gestionar presupuestos, pero
+eso no implica que deba poder ver ni cambiar las credenciales del correo personal del
+propietario. Son dos niveles de confianza distintos y conviene no mezclarlos.

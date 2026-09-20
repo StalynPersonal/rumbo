@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Rumbo.Infraestructura.Persistencia;
 
@@ -11,9 +12,11 @@ using Rumbo.Infraestructura.Persistencia;
 namespace Rumbo.Infraestructura.Persistencia.Migrations
 {
     [DbContext(typeof(ContextoRumbo))]
-    partial class ContextoRumboModelSnapshot : ModelSnapshot
+    [Migration("20260920143557_AgregarConfiguracionDeCorreo")]
+    partial class AgregarConfiguracionDeCorreo
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

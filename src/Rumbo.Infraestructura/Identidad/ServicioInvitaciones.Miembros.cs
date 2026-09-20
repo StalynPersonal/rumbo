@@ -85,7 +85,10 @@ public partial class ServicioInvitaciones
             _correo.UrlBase,
             DiasValidez);
 
-        var enviado = await enviadorCorreo.EnviarAsync(correoNormalizado, asunto, cuerpo, cancelacion);
+        // Se indica el espacio para que, si el propietario configuro su propio servidor,
+        // la invitacion llegue desde SU direccion y no desde una generica.
+        var enviado = await enviadorCorreo.EnviarAsync(
+            correoNormalizado, asunto, cuerpo, espacioId, cancelacion);
 
         registro.LogInformation(
             "Invitación de miembro creada para el espacio {EspacioId}. Correo enviado: {Enviado}.",

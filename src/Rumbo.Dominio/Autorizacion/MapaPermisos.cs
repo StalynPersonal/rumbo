@@ -65,6 +65,10 @@ public static class MapaPermisos
     [
         .. DeAdministrador,
         Permisos.Espacio.Eliminar,
+
+        // Configurar el correo del espacio implica guardar la contrasena de una cuenta de
+        // correo personal. Solo quien creo el hogar deberia poder ponerla o cambiarla.
+        Permisos.Espacio.ConfigurarCorreo,
     ];
 
     /// <summary>

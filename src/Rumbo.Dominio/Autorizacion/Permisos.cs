@@ -116,6 +116,16 @@ public static class Permisos
         /// <summary>Cambiar roles, suspender o expulsar miembros.</summary>
         public const string GestionarMiembros = "espacio.gestionar_miembros";
 
+        /// <summary>
+        /// Configurar el servidor de correo del espacio.
+        /// </summary>
+        /// <remarks>
+        /// Permiso aparte y reservado al propietario. No son credenciales del sistema: son
+        /// las de su cuenta de correo personal, y no tiene por que confiarselas a un
+        /// administrador del hogar solo porque este pueda invitar gente.
+        /// </remarks>
+        public const string ConfigurarCorreo = "espacio.configurar_correo";
+
         /// <summary>Eliminar el espacio completo.</summary>
         public const string Eliminar = "espacio.eliminar";
     }

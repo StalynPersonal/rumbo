@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 
 using Rumbo.Aplicacion.Comun;
 using Rumbo.Aplicacion.Contratos;
+using Rumbo.Contratos.Correo;
 using Rumbo.Contratos.Invitaciones;
 using Rumbo.Infraestructura.Identidad;
 
@@ -25,6 +26,7 @@ namespace Rumbo.Api.Controladores.V1;
 /// </para>
 /// </remarks>
 /// <param name="invitaciones">Servicio de invitaciones.</param>
+/// <param name="correo">Servicio de configuracion de correo.</param>
 /// <param name="usuarioActual">Identidad de quien llama.</param>
 [ApiController]
 [Route("api/v1/administracion")]
@@ -32,6 +34,7 @@ namespace Rumbo.Api.Controladores.V1;
 [Authorize(Roles = RolesPlataforma.AdministradorPlataforma)]
 public class AdministracionController(
     IServicioInvitaciones invitaciones,
+    IServicioConfiguracionCorreo correo,
     IUsuarioActual usuarioActual) : ControllerBase
 {
     /// <summary>Invita a alguien a crear su propio espacio.</summary>
@@ -77,4 +80,48 @@ public class AdministracionController(
 
         return NoContent();
     }
+
+    /// <summary>Devuelve el servidor de correo de la plataforma.</summary>
+    /// <param name="cancelacion">Token de cancelación.</param>
+    /// <returns>La configuración, sin la contraseña.</returns>
+    /// <remarks>
+    /// Este servidor envía lo que no pertenece a ningún hogar: la invitación a un futuro
+    /// propietario, cuyo espacio todavía no existe, y el restablecimiento de contraseña, que
+    /// pertenece a la persona y no a un espacio.
+    /// </remarks>
+    [HttpGet("correo")]
+    [ProducesResponseType<ConfiguracionCorreoDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<ConfiguracionCorreoDto>> ObtenerCorreo(
+        CancellationToken cancelacion) =>
+        Ok(await correo.ObtenerPlataformaAsync(cancelacion));
+
+    /// <summary>Guarda el servidor de correo de la plataforma.</summary>
+    /// <param name="solicitud">Datos del servidor.</param>
+    /// <param name="cancelacion">Token de cancelación.</param>
+    /// <returns>La configuración guardada, sin la contraseña.</returns>
+    /// <remarks>
+    /// Dejar la contraseña vacía conserva la que ya estuviera guardada. La contraseña se
+    /// cifra antes de almacenarse y la API no la devuelve nunca.
+    /// </remarks>
+    [HttpPut("correo")]
+    [ProducesResponseType<ConfiguracionCorreoDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<ConfiguracionCorreoDto>> GuardarCorreo(
+        [FromBody] SolicitudGuardarCorreo solicitud,
+        CancellationToken cancelacion) =>
+        Ok(await correo.GuardarPlataformaAsync(solicitud, cancelacion));
+
+    /// <summary>Comprueba que el servidor de la plataforma funciona.</summary>
+    /// <param name="solicitud">Dirección de prueba, opcional.</param>
+    /// <param name="cancelacion">Token de cancelación.</param>
+    /// <returns>El resultado de la prueba.</returns>
+    [HttpPost("correo/probar")]
+    [ProducesResponseType<ResultadoPruebaCorreo>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<ResultadoPruebaCorreo>> ProbarCorreo(
+        [FromBody] SolicitudProbarCorreo solicitud,
+        CancellationToken cancelacion) =>
+        Ok(await correo.ProbarPlataformaAsync(solicitud, cancelacion));
 }

@@ -78,7 +78,7 @@ Swagger solo se publica en los ambientes `Development` y `Staging`.
 
 ```bash
 dotnet ef database update --project src/Rumbo.Infraestructura --startup-project src/Rumbo.Api
-dotnet test Rumbo.slnx           # 53 pruebas
+dotnet test Rumbo.slnx           # 72 pruebas
 ```
 
 ## Documentación

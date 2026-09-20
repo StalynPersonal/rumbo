@@ -136,7 +136,10 @@ public static class InyeccionDependencias
         servicios.AddMemoryCache();
         servicios.AddSingleton<CacheMembresias>();
         servicios.AddScoped<IServicioTokens, ServicioTokensJwt>();
+        servicios.AddScoped<IProtectorSecretos, ProtectorSecretos>();
+        servicios.AddScoped<ResolvedorCorreo>();
         servicios.AddScoped<IEnviadorCorreo, EnviadorCorreoSmtp>();
+        servicios.AddScoped<IServicioConfiguracionCorreo, ServicioConfiguracionCorreo>();
         servicios.AddScoped<IServicioAutenticacion, ServicioAutenticacion>();
         servicios.AddScoped<IServicioInvitaciones, ServicioInvitaciones>();
         servicios.AddScoped<IServicioEspacios, ServicioEspacios>();

@@ -63,7 +63,9 @@ public partial class ServicioAutenticacion
         var (asunto, cuerpo) = PlantillasCorreo.RestablecerClave(
             usuario.NombreCompleto, codigo, correoNormalizado, _correo.UrlBase);
 
-        await enviadorCorreo.EnviarAsync(correoNormalizado, asunto, cuerpo, cancelacion);
+        // Sin espacio: restablecer la contrasena pertenece a la persona, que puede estar en
+        // varios hogares. Sale siempre por el servidor de plataforma.
+        await enviadorCorreo.EnviarAsync(correoNormalizado, asunto, cuerpo, espacioId: null, cancelacion);
 
         registro.LogInformation(
             "Se envió el enlace de restablecimiento al usuario {UsuarioId}.", usuario.Id);

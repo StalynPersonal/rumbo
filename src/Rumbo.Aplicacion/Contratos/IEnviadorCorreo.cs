@@ -16,6 +16,11 @@ public interface IEnviadorCorreo
     /// <param name="destinatario">Direccion de destino.</param>
     /// <param name="asunto">Asunto del mensaje.</param>
     /// <param name="cuerpoHtml">Cuerpo en HTML.</param>
+    /// <param name="espacioId">
+    /// Espacio del que parte el correo. Si se indica y ese espacio tiene su propio servidor
+    /// configurado, el mensaje sale desde el correo del propietario. Si es <c>null</c>, o si
+    /// el espacio no tiene servidor propio, se usa el de la plataforma.
+    /// </param>
     /// <param name="cancelacion">Token de cancelacion.</param>
     /// <returns>
     /// <c>true</c> si el correo salio. Devuelve <c>false</c> en lugar de lanzar una excepcion
@@ -26,5 +31,6 @@ public interface IEnviadorCorreo
         string destinatario,
         string asunto,
         string cuerpoHtml,
+        Guid? espacioId = null,
         CancellationToken cancelacion = default);
 }
