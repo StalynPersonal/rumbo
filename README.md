@@ -120,4 +120,3 @@ recomendación: `GenerateDocumentationFile` está activo y CS1591 **no** está s
 | 9 | Seguridad y pruebas | ⬜ |
 | 10 | Despliegue en Azure | ⬜ |
 | 11 | Generación del APK | ⬜ |
-"# rumbo"
