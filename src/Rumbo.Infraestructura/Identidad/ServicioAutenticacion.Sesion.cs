@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 using Rumbo.Contratos.Autenticacion;
 using Rumbo.Dominio.Enums;

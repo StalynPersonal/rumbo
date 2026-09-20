@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 using Rumbo.Contratos.Autenticacion;
 using Rumbo.Dominio.Excepciones;
