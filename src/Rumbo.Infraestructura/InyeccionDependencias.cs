@@ -17,6 +17,7 @@ using Rumbo.Aplicacion.Modulos.Presupuestos;
 using Rumbo.Aplicacion.Modulos.Recomendaciones;
 using Rumbo.Aplicacion.Modulos.Recurrentes;
 using Rumbo.Aplicacion.Recomendaciones;
+using Rumbo.Aplicacion.Modulos.Viajes;
 using Rumbo.Aplicacion.Recomendaciones.Reglas;
 using Microsoft.IdentityModel.Tokens;
 
@@ -176,10 +177,13 @@ public static class InyeccionDependencias
         servicios.AddScoped<AnalizadorFlujoCaja>();
         servicios.AddScoped<IServicioPresupuestos, ServicioPresupuestos>();
         servicios.AddScoped<IServicioMetas, ServicioMetas>();
+        servicios.AddScoped<IServicioViajes, ServicioViajes>();
 
         // Las reglas se registran como una coleccion: el motor las recibe todas y las
         // ejecuta por orden de prioridad. Anadir una regla nueva es anadir una linea aqui,
         // sin tocar el motor.
+        servicios.AddScoped<IReglaRecomendacion, ReglaDestinoDeIngresoExtra>();
+        servicios.AddScoped<IReglaRecomendacion, ReglaViabilidadDeViaje>();
         servicios.AddScoped<IReglaRecomendacion, ReglaAporteMensualParaMeta>();
         servicios.AddScoped<IReglaRecomendacion, ReglaAlertaDePresupuesto>();
         servicios.AddScoped<MotorRecomendaciones>();

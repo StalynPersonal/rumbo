@@ -632,3 +632,89 @@ con las demás. Es preferible mostrar cuatro sugerencias de cinco que ninguna.
 **Por qué.** Recalcular solo deriva datos que ya existen, así que cualquier miembro puede
 hacerlo. Responder, en cambio, deja constancia de una decisión del hogar sobre su plan de
 ahorro, y eso encaja con el mismo criterio que ya separa `metas.leer` de `metas.escribir`.
+
+
+---
+
+## D40 — El presupuesto de un viaje es la suma de sus partidas
+**Fecha:** 2026-09-20 · **Estado:** aceptada
+
+**Decisión.** `SolicitudGuardarViaje` no lleva un campo de presupuesto total. El servidor lo
+calcula sumando las partidas, y se rechaza que una partida aparezca dos veces.
+
+**Por qué.** Guardar el total y el desglose por separado deja abierta la puerta a que no
+cuadren, y entonces hay que decidir cuál manda: exactamente el tipo de ambigüedad que arruina
+un informe. Con una sola fuente, el desglose siempre suma el total.
+
+---
+
+## D41 — Un movimiento de viaje puede indicar su partida
+**Fecha:** 2026-09-20 · **Estado:** aceptada
+
+**Contexto.** `Movimiento` tenía `ViajeId`, lo que permitía comparar el gasto real con el
+presupuesto **total** del viaje, pero no con cada partida.
+
+**Decisión.** Se añade `Movimiento.CategoriaViaje` (nullable) y el campo opcional
+`categoriaViaje` en `POST /movimientos`. Migración `AgregarPartidaDeViajeAlMovimiento`.
+
+**Por qué.** La comparación por partida es justo donde se ve que el hospedaje se disparó y los
+vuelos salieron baratos; el total solo dice que se gastó de más. Indicar una partida **sin**
+viaje se rechaza: sería un dato huérfano que después aparece en un informe de viajes sin
+pertenecer a ninguno.
+
+Es un campo añadido, no un cambio de decisión previa: el modelo del plan seguía siendo válido,
+solo incompleto para lo que la pantalla de viaje necesita mostrar.
+
+---
+
+## D42 — La viabilidad de un viaje se responde con tres escenarios
+**Fecha:** 2026-09-20 · **Estado:** aceptada
+
+**Decisión.** `GET /viajes/{id}/viabilidad` devuelve un escenario conservador (60 % del
+excedente mensual), uno esperado (85 %) y uno optimista (100 %), más un veredicto `Si`,
+`Ajustado` o `No` con su explicación en español.
+
+**Por qué.** Una cifra única —«sí, podéis»— se lee como una promesa, y el excedente mensual de
+un hogar no es constante: un mes hay una reparación, otro una boda. Tres escenarios dicen la
+verdad: con qué supuesto se llega y con cuál no. El conservador no supone que el hogar ahorre
+todo lo que le sobra, porque nadie lo hace.
+
+La `fechaViableMasCercana` se calcula con el escenario **prudente**, no con el optimista:
+proponer una fecha que solo se cumple ahorrando hasta el último peso sería repetir el problema
+con otra cara.
+
+Cuando el hogar no tiene excedente, el veredicto es `No` y se dice por qué. Fingir que se puede
+ahorrar sin margen sería el peor consejo que puede dar una aplicación de finanzas.
+
+**No mueve dinero, no crea aportes y no reserva nada.**
+
+---
+
+## D43 — El fondo de un viaje se lee de su meta, no se guarda en el viaje
+**Fecha:** 2026-09-20 · **Estado:** aceptada
+
+**Decisión.** `ViajeDetalle.FondoActual` sale de `Meta.MontoActual` de la meta vinculada.
+
+**Por qué.** Duplicar la cifra abriría la puerta a que el viaje y la meta dijeran cosas
+distintas sobre el mismo dinero. Además mantiene la separación entre las dos caras del viaje: el
+presupuesto es intención de gasto, el fondo es dinero real que vive en una cuenta.
+
+---
+
+## D44 — Dos reglas nuevas: viabilidad de viaje e ingreso extraordinario
+**Fecha:** 2026-09-20 · **Estado:** aceptada
+
+**Decisión.** Se añaden `ReglaViabilidadDeViaje` (prioridad 15) y
+`ReglaDestinoDeIngresoExtra` (prioridad 10) al motor.
+
+**Por qué.** La primera convierte la pregunta del viaje en un aviso que llega solo: vale mucho
+más saberlo nueve meses antes que tres semanas antes. Solo habla cuando el veredicto **no** es
+`Si`, porque una aplicación que dice algo cada vez que se abre acaba ignorándose.
+
+La segunda detecta un ingreso un 40 % por encima de la media mensual dentro de los últimos 30
+días y propone destinarlo a la meta activa más prioritaria. Un bono suele disolverse en el gasto
+corriente sin que nadie decida nada; la regla pone la decisión encima de la mesa mientras el
+dinero todavía está. Propone **una** meta y no un reparto: media docena de aportes simbólicos no
+acercan ninguna, y uno solo a la más urgente sí.
+
+Ninguna de las dos mueve dinero.

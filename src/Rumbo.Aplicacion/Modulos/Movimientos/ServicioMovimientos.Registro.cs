@@ -62,6 +62,8 @@ public partial class ServicioMovimientos
             await VerificarQueElViajeExisteAsync(solicitud.ViajeId.Value, cancelacion);
         }
 
+        var partidaDeViaje = LeerPartidaDeViaje(solicitud.CategoriaViaje, solicitud.ViajeId);
+
         var reparto = LeerReparto(solicitud.Reparto);
         var metodoPago = LeerMetodoPago(solicitud.MetodoPago);
 
@@ -94,6 +96,7 @@ public partial class ServicioMovimientos
             Reparto = reparto,
             PagadoPorUsuarioId = solicitud.PagadoPorUsuarioId ?? usuarioActual.UsuarioId,
             ViajeId = solicitud.ViajeId,
+            CategoriaViaje = partidaDeViaje,
         };
 
         await contexto.EjecutarEnTransaccionAsync(async token =>

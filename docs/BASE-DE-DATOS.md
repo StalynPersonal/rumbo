@@ -206,3 +206,17 @@ saberlo.
 Las tasas se cargan explícitamente. Cuando falte la de una fecha, el sistema usará la anterior
 más cercana y marcará el movimiento con `TasaEsAproximada`; si no existe ninguna, rechazará la
 operación con un mensaje claro en lugar de suponer una paridad de 1 a 1.
+
+
+## 7. Migraciones aplicadas
+
+| Migración | Qué añade |
+|---|---|
+| `MigracionInicial` | Todo el esquema: identidad, espacios, libro mayor y planificación |
+| `AgregarTipoEspacioPropuestoAInvitacion` | El tipo de espacio se decide al invitar, no después |
+| `AgregarConfiguracionDeCorreo` | SMTP de plataforma y por espacio, con la clave cifrada |
+| `AgregarPartidaDeViajeAlMovimiento` | `Movimientos.CategoriaViaje`, para comparar el gasto real de un viaje **partida a partida** y no solo contra el total |
+
+`Movimientos.CategoriaViaje` es nulable y solo tiene sentido junto a `ViajeId`. La API rechaza
+una partida sin viaje: sería un dato huérfano que después aparece en un informe de viajes sin
+pertenecer a ninguno.

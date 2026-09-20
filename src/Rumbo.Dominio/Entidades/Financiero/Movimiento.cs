@@ -119,6 +119,14 @@ public class Movimiento : EntidadDeEspacio
     /// <summary>Viaje al que pertenece el gasto.</summary>
     public Viaje? Viaje { get; set; }
 
+    /// <summary>Partida del viaje a la que se imputa: vuelos, hospedaje, comida...</summary>
+    /// <remarks>
+    /// Solo tiene sentido junto con <see cref="ViajeId"/>. Sin ella, un gasto de viaje se
+    /// podria comparar con el presupuesto total pero no con la partida concreta, que es
+    /// justo donde se ve que el hospedaje se disparo y los vuelos salieron baratos.
+    /// </remarks>
+    public CategoriaViaje? CategoriaViaje { get; set; }
+
     /// <summary>Transferencia de la que este movimiento es una de las dos patas.</summary>
     public Guid? TransferenciaId { get; set; }
 

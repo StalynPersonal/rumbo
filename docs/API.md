@@ -337,3 +337,60 @@ aplicación debe presentarla como estimación, no como dato.
 Reglas activas hoy: **aporte mensual para una meta** (cuánto haría falta apartar al mes y si el
 flujo de caja lo permite) y **alerta de presupuesto** (una partida que va camino de excederse
 antes de que acabe el período).
+
+
+## Viajes
+
+| Ruta | Permiso | Qué hace |
+|---|---|---|
+| `GET /viajes?incluirCerrados=` | `viajes.leer` | Lista por fecha de salida |
+| `GET /viajes/{id}` | `viajes.leer` | Un viaje con su desglose y gasto real |
+| `GET /viajes/{id}/viabilidad` | `viajes.leer` | **¿Podemos permitirnos este viaje?** |
+| `POST /viajes` | `viajes.escribir` | Crea un viaje con su desglose |
+| `PUT /viajes/{id}` | `viajes.escribir` | Modifica y **reemplaza** el desglose |
+| `PUT /viajes/{id}/estado` | `viajes.escribir` | Planificado, EnCurso, Finalizado, Cancelado |
+| `DELETE /viajes/{id}` | `viajes.escribir` | Elimina un viaje **sin gastos** |
+
+Un viaje tiene **dos caras** que conviene no confundir:
+
+- El **presupuesto**: lo que se piensa gastar, desglosado en partidas (`Vuelos`, `Hospedaje`,
+  `Alimentacion`, `Transporte`, `Actividades`, `Compras`, `Documentos`, `Seguro`, `Otros`).
+- El **fondo**: lo que se lleva ahorrado para pagarlo. Eso es una **meta** con su cuenta de
+  ahorro, referenciada con `metaId`. El fondo no se guarda en el viaje: se lee de la meta, para
+  que las dos cifras no puedan decir cosas distintas sobre el mismo dinero.
+
+El `presupuestoTotal` **no se envía**: es la suma de las partidas. Guardar las dos cosas dejaría
+abierta la puerta a que no cuadraran, y entonces habría que decidir cuál manda.
+
+Los **gastos del viaje sí son gastos** normales del hogar: se registran con `POST /movimientos`
+indicando `viajeId` y, opcionalmente, `categoriaViaje` para imputarlos a una partida concreta.
+Una `categoriaViaje` sin `viajeId` se rechaza. Los **aportes al fondo**, en cambio, son
+transferencias hacia la cuenta de ahorro: no aparecen como gasto del viaje.
+
+### ¿Podemos permitirnos este viaje?
+
+`GET /viajes/{id}/viabilidad` devuelve **tres escenarios** en lugar de una sola cifra, porque
+una respuesta única se lee como una promesa y el excedente mensual de un hogar no es constante:
+un mes hay una reparación, otro una boda.
+
+| Escenario | Supuesto |
+|---|---|
+| Conservador | Se aparta el **60 %** del excedente mensual |
+| Esperado | Se aparta el **85 %** |
+| Optimista | Se aparta **todo** el excedente |
+
+El veredicto resume los tres:
+
+- **`Si`** — se llega incluso en el escenario prudente.
+- **`Ajustado`** — solo se llega apretando, sin fallar ningún mes.
+- **`No`** — ni ahorrando todo el excedente se llega, o no hay excedente.
+
+Además devuelve `aporteMensualNecesario`, `esfuerzoRequerido` (qué parte del excedente se comería
+el viaje), una `explicacion` en español y, si hoy no alcanza, la `fechaViableMasCercana`
+calculada con el escenario **prudente**: proponer una fecha que solo se cumple ahorrando hasta el
+último peso sería repetir el problema con otra cara.
+
+El excedente sale de `AnalizadorFlujoCaja`, que ya descuenta los compromisos recurrentes. Con
+menos de tres meses de historial la respuesta llega con `confianzaBaja: true`.
+
+**No mueve dinero, no crea aportes y no reserva nada.** Es una proyección para decidir.

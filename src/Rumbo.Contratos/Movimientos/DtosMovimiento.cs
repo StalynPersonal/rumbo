@@ -61,6 +61,10 @@ public record MovimientoResumen(
 /// <param name="Reparto">Personal o Compartido.</param>
 /// <param name="PagadoPorUsuarioId">Quien puso el dinero.</param>
 /// <param name="ViajeId">Viaje al que imputarlo, si aplica.</param>
+/// <param name="CategoriaViaje">
+/// Partida del viaje: Vuelos, Hospedaje, Alimentacion, Transporte, Actividades, Compras,
+/// Documentos, Seguro u Otros. Solo se admite acompañada de un viaje.
+/// </param>
 public record SolicitudRegistrarMovimiento(
     string Tipo,
     Guid CuentaId,
@@ -73,7 +77,8 @@ public record SolicitudRegistrarMovimiento(
     string? MetodoPago,
     string Reparto,
     Guid? PagadoPorUsuarioId,
-    Guid? ViajeId);
+    Guid? ViajeId,
+    string? CategoriaViaje = null);
 
 /// <summary>Datos para modificar un movimiento.</summary>
 /// <param name="CategoriaId">Categoria.</param>

@@ -107,6 +107,32 @@ public partial class ServicioMovimientos
             : throw new ExcepcionDominio("El método de pago indicado no es válido.");
     }
 
+    /// <summary>Traduce el nombre de una partida de viaje al enum.</summary>
+    /// <param name="valor">Nombre recibido, o <c>null</c>.</param>
+    /// <param name="viajeId">Viaje al que se imputa el movimiento.</param>
+    /// <returns>La partida, o <c>null</c> si no se indico.</returns>
+    /// <remarks>
+    /// Se rechaza una partida sin viaje: seria un dato huerfano que despues aparece en un
+    /// informe de viajes sin pertenecer a ninguno.
+    /// </remarks>
+    private static CategoriaViaje? LeerPartidaDeViaje(string? valor, Guid? viajeId)
+    {
+        if (string.IsNullOrWhiteSpace(valor))
+        {
+            return null;
+        }
+
+        if (viajeId is null)
+        {
+            throw new ExcepcionDominio(
+                "Se indicó una partida de viaje sin decir a qué viaje pertenece el gasto.");
+        }
+
+        return Enum.TryParse<CategoriaViaje>(valor, ignoreCase: true, out var partida)
+            ? partida
+            : throw new ExcepcionDominio("La partida de viaje indicada no es válida.");
+    }
+
     /// <summary>
     /// Convierte un importe a la moneda base del espacio con la tasa de esa fecha.
     /// </summary>
