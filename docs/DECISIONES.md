@@ -299,3 +299,52 @@ guarda de tres líneas frente a una pérdida irreversible es un intercambio evid
 desincronizados. Sobre un token de 15 minutos, eso alarga su vida útil un tercio. Cliente y
 servidor sincronizan por NTP, así que la holgura no aporta nada y solo amplía la ventana de
 un token robado.
+
+---
+
+## D20 — Los miembros se consultan en dos pasos, no con un `join`
+**Fecha:** 2026-09-20 · **Estado:** aceptada
+
+**Contexto.** Listar los miembros de un espacio exige unir `MembresiasEspacio` (dominio) con
+`Usuarios` (Identity, infraestructura). Por D11 el dominio no conoce el tipo `Usuario`, así
+que no hay propiedad de navegación entre ambos.
+
+**Problema encontrado.** El `join` escrito en LINQ **no lo traduce EF Core**: falla en tiempo
+de ejecución con `The LINQ expression could not be translated`. El compilador no avisa.
+
+**Decisión.** Dos consultas y combinación en memoria: primero las membresías, después los
+usuarios por sus identificadores.
+
+**Por qué es aceptable.** Un hogar tiene dos o tres personas, y una familia rara vez pasa de
+diez. Son dos consultas por índice sobre conjuntos diminutos. La alternativa —añadir una
+navegación del dominio hacia Identity— rompería una regla de arquitectura por un problema que
+no existe a esta escala.
+
+---
+
+## D21 — La caché de membresías se invalida al cambiar rol o estado
+**Fecha:** 2026-09-20 · **Estado:** aceptada
+
+**Contexto.** El middleware verifica la membresía en cada petición y cachea el resultado 30
+segundos. La documentación afirmaba que revocar un acceso surtía efecto «casi de inmediato».
+
+**Problema encontrado.** Una prueba lo desmintió: con la caché sin invalidar, suspender a
+alguien tardaba **hasta 30 segundos** en tener efecto.
+
+**Decisión.** `CacheMembresias.Invalidar` se llama siempre que cambia el rol o el estado de
+una membresía. Retirar un acceso surte efecto en la siguiente petición.
+
+**Limitación documentada.** La caché es por instancia. Con varias instancias, la invalidación
+solo alcanza a una; habrá que pasar a caché distribuida si se escala horizontalmente.
+
+---
+
+## D22 — El tipo de espacio elegido al invitar se persiste en la invitación
+**Fecha:** 2026-09-20 · **Estado:** aceptada
+
+**Problema encontrado.** El administrador elegía «Pareja» al invitar, pero el alta creaba
+siempre un espacio `Personal`: `Invitacion` no guardaba el tipo, así que la elección se perdía
+entre la invitación y el registro. Se detectó probando el flujo a mano.
+
+**Decisión.** `Invitacion.TipoEspacioPropuesto` persiste la elección, y el alta la respeta.
+Migración `AgregarTipoEspacioPropuestoAInvitacion`.

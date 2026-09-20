@@ -91,7 +91,9 @@ public partial class ServicioAutenticacion
         {
             Id = Guid.CreateVersion7(),
             Nombre = invitacion.NombreEspacioPropuesto ?? $"Finanzas de {usuario.NombreCompleto}",
-            Tipo = TipoEspacio.Personal,
+            // Se respeta el tipo que eligio quien emitio la invitacion. Ignorarlo y poner
+            // siempre Personal haria que un hogar de pareja naciera mal clasificado.
+            Tipo = invitacion.TipoEspacioPropuesto ?? TipoEspacio.Personal,
             MonedaBase = "DOP",
             ZonaHoraria = "America/Santo_Domingo",
             Estado = EstadoEspacio.Activo,

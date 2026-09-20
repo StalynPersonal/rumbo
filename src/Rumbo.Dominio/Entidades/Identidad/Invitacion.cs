@@ -49,6 +49,15 @@ public class Invitacion : EntidadAuditable
     /// </summary>
     public string? NombreEspacioPropuesto { get; set; }
 
+    /// <summary>
+    /// Tipo del espacio que se creara, en invitaciones de tipo Propietario.
+    /// </summary>
+    /// <remarks>
+    /// Lo elige quien invita y debe respetarse al crear el espacio. Guardarlo aqui es lo que
+    /// evita que la eleccion se pierda entre la invitacion y el alta.
+    /// </remarks>
+    public TipoEspacio? TipoEspacioPropuesto { get; set; }
+
     /// <summary>Rol que tendra la persona al aceptar, en invitaciones de tipo Miembro.</summary>
     public RolEspacio? RolAsignado { get; set; }
 

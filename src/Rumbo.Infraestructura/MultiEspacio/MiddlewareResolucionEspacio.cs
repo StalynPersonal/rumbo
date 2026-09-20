@@ -2,7 +2,6 @@ using System.Security.Claims;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 
 using Rumbo.Dominio.Enums;
@@ -43,9 +42,6 @@ public class MiddlewareResolucionEspacio(
     RequestDelegate siguiente,
     ILogger<MiddlewareResolucionEspacio> registro)
 {
-    /// <summary>Cuanto se conserva en cache el resultado de verificar una membresia.</summary>
-    private static readonly TimeSpan DuracionCache = TimeSpan.FromSeconds(30);
-
     /// <summary>
     /// Procesa la peticion, resolviendo el usuario y el espacio antes de continuar.
     /// </summary>
@@ -53,14 +49,14 @@ public class MiddlewareResolucionEspacio(
     /// <param name="contextoEspacio">Contexto de espacio de la peticion.</param>
     /// <param name="usuarioActual">Identidad del solicitante.</param>
     /// <param name="baseDatos">Contexto de base de datos.</param>
-    /// <param name="cache">Cache en memoria para las membresias.</param>
+    /// <param name="cacheMembresias">Cache de comprobaciones de membresia.</param>
     /// <returns>Tarea que finaliza cuando se procesa la peticion.</returns>
     public async Task InvokeAsync(
         HttpContext contextoHttp,
         ContextoEspacio contextoEspacio,
         UsuarioActual usuarioActual,
         ContextoRumbo baseDatos,
-        IMemoryCache cache)
+        CacheMembresias cacheMembresias)
     {
         var principal = contextoHttp.User;
 
@@ -95,8 +91,8 @@ public class MiddlewareResolucionEspacio(
 
         if (espacioDelToken is not null)
         {
-            rolVerificado = await ObtenerRolVerificadoAsync(
-                baseDatos, cache, usuarioId.Value, espacioDelToken.Value);
+            rolVerificado = await cacheMembresias.ObtenerRolVerificadoAsync(
+                baseDatos, usuarioId.Value, espacioDelToken.Value);
 
             if (rolVerificado is null)
             {
@@ -118,38 +114,6 @@ public class MiddlewareResolucionEspacio(
         usuarioActual.Establecer(usuarioId.Value, correo, rolVerificado, esAdministrador);
 
         await siguiente(contextoHttp);
-    }
-
-    /// <summary>
-    /// Comprueba en la base de datos que la membresia esta activa y devuelve su rol.
-    /// </summary>
-    /// <returns>El rol, o <c>null</c> si no hay membresia activa.</returns>
-    private static async Task<RolEspacio?> ObtenerRolVerificadoAsync(
-        ContextoRumbo baseDatos,
-        IMemoryCache cache,
-        Guid usuarioId,
-        Guid espacioId)
-    {
-        var clave = $"membresia:{usuarioId}:{espacioId}";
-
-        if (cache.TryGetValue<RolEspacio?>(clave, out var enCache))
-        {
-            return enCache;
-        }
-
-        // MembresiasEspacio es una tabla global, sin filtro de aislamiento: tiene que serlo,
-        // porque se consulta justo para averiguar a que espacio puede entrar alguien.
-        var membresia = await baseDatos.MembresiasEspacio
-            .AsNoTracking()
-            .Where(m => m.UsuarioId == usuarioId
-                        && m.EspacioId == espacioId
-                        && m.Estado == EstadoMembresia.Activa)
-            .Select(m => (RolEspacio?)m.Rol)
-            .FirstOrDefaultAsync();
-
-        cache.Set(clave, membresia, DuracionCache);
-
-        return membresia;
     }
 
     /// <summary>Lee una reclamacion como <see cref="Guid"/>.</summary>

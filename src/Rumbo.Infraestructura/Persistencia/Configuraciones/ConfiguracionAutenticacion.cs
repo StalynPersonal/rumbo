@@ -23,6 +23,7 @@ public class ConfiguracionInvitacion : IEntityTypeConfiguration<Invitacion>
         constructor.Property(i => i.Tipo).HasConversion<string>().HasMaxLength(20);
         constructor.Property(i => i.Estado).HasConversion<string>().HasMaxLength(20);
         constructor.Property(i => i.RolAsignado).HasConversion<string>().HasMaxLength(20);
+        constructor.Property(i => i.TipoEspacioPropuesto).HasConversion<string>().HasMaxLength(20);
 
         // Al canjear una invitacion se busca por el hash del codigo: tiene que ser unico y
         // estar indexado, porque es la operacion critica del alta.

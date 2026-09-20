@@ -87,8 +87,16 @@ Cinco capas independientes. El diseño asume que cualquiera puede fallar.
 Además, el middleware **verifica la membresía contra la base de datos en cada petición**, con
 una caché de 30 segundos. El token es de fiar porque está firmado, pero refleja la situación
 del momento en que se emitió: si se expulsa a alguien del hogar, su token seguiría diciendo
-que pertenece a él durante quince minutos. Comprobarlo en cada petición hace que revocar un
-acceso surta efecto casi de inmediato.
+que pertenece a él durante quince minutos.
+
+**La caché se invalida explícitamente** cuando cambia el rol o el estado de una membresía, así
+que suspender o expulsar a alguien tiene efecto en su **siguiente petición**, no medio minuto
+después. Lo verifica `SuspenderAUnMiembroLeCortaElAccesoDeInmediato`.
+
+*Limitación conocida:* la caché es de memoria, por instancia. Con varias instancias en Azure,
+la invalidación solo alcanza a la que atendió la petición, y en las demás el cambio tardaría
+los 30 segundos. Con una sola instancia, que es el escenario previsto, no aplica. Si se escala
+horizontalmente habrá que pasar a una caché distribuida.
 
 ### El administrador de plataforma
 

@@ -134,10 +134,12 @@ public static class InyeccionDependencias
 
         // --- Servicios propios ------------------------------------------------
         servicios.AddMemoryCache();
+        servicios.AddSingleton<CacheMembresias>();
         servicios.AddScoped<IServicioTokens, ServicioTokensJwt>();
         servicios.AddScoped<IEnviadorCorreo, EnviadorCorreoSmtp>();
         servicios.AddScoped<IServicioAutenticacion, ServicioAutenticacion>();
         servicios.AddScoped<IServicioInvitaciones, ServicioInvitaciones>();
+        servicios.AddScoped<IServicioEspacios, ServicioEspacios>();
 
         // --- Validacion del token en cada peticion -----------------------------
         var opcionesJwt = configuracion.GetSection(OpcionesJwt.Seccion).Get<OpcionesJwt>()

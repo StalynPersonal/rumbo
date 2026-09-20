@@ -71,7 +71,7 @@ public partial class ServicioInvitaciones(
         await VerificarQueNoTieneCuentaAsync(correoNormalizado);
         await VerificarQueNoHayInvitacionPendienteAsync(correoNormalizado, cancelacion);
 
-        if (!Enum.TryParse<TipoEspacio>(solicitud.TipoEspacio, ignoreCase: true, out _))
+        if (!Enum.TryParse<TipoEspacio>(solicitud.TipoEspacio, ignoreCase: true, out var tipoEspacio))
         {
             throw new ExcepcionDominio(
                 "El tipo de espacio debe ser Personal, Pareja, Familia o Negocio.");
@@ -85,6 +85,7 @@ public partial class ServicioInvitaciones(
             Correo = correoNormalizado,
             HashCodigo = hash,
             NombreEspacioPropuesto = solicitud.NombreEspacioPropuesto.Trim(),
+            TipoEspacioPropuesto = tipoEspacio,
             EmitidaPorUsuarioId = emitidaPorUsuarioId,
             FechaExpiracion = fechaHora.AhoraUtc.AddDays(DiasValidez),
             Estado = EstadoInvitacion.Pendiente,
