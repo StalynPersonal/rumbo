@@ -55,3 +55,18 @@ dotnet_naming_style.guion_bajo_camel.capitalization = camel_case
 
 # --- Avisos que NO queremos como error (recordar: TreatWarningsAsErrors esta activo) ---
 dotnet_diagnostic.CA1861.severity = suggestion
+
+# ---------------------------------------------------------------------------
+# Migraciones de EF Core.
+# Las genera "dotnet ef", no las escribimos nosotros, asi que no tiene sentido
+# exigirles nuestro estilo de codigo: el generador usa namespaces con llaves y
+# no documenta sus miembros publicos. Marcarlas como codigo generado evita que
+# TreatWarningsAsErrors rompa la compilacion por algo que no podemos cambiar
+# sin editar a mano un fichero que se regenera.
+# ---------------------------------------------------------------------------
+[**/Migrations/*.cs]
+generated_code = true
+dotnet_analyzer_diagnostic.severity = none
+csharp_style_namespace_declarations = file_scoped:none
+dotnet_diagnostic.IDE0161.severity = none
+dotnet_diagnostic.CS1591.severity = none

@@ -57,7 +57,7 @@ El **Dominio no referencia nada**. La app móvil solo referencia `Rumbo.Contrato
 | Requisito | Versión |
 |---|---|
 | .NET SDK | 10.0.401 o superior (fijado en `global.json`) |
-| SQL Server | 2022 Developer o Express, instancia `RUMBO2022` — ver [docs/BASE-DE-DATOS.md](docs/BASE-DE-DATOS.md) |
+| SQL Server | 2016 o superior. En esta máquina: 2025 Express en `localhost\SQLEXPRESS` — ver [docs/BASE-DE-DATOS.md](docs/BASE-DE-DATOS.md) |
 | EF Core Tools | `dotnet tool install --global dotnet-ef` |
 | Workload MAUI | `dotnet workload install maui-android` (solo para la Fase 8) |
 
@@ -77,7 +77,8 @@ Luego:
 Swagger solo se publica en los ambientes `Development` y `Staging`.
 
 ```bash
-dotnet test Rumbo.slnx           # ejecutar todas las pruebas
+dotnet ef database update --project src/Rumbo.Infraestructura --startup-project src/Rumbo.Api
+dotnet test Rumbo.slnx           # 36 pruebas
 ```
 
 ## Documentación
@@ -110,8 +111,8 @@ recomendación: `GenerateDocumentationFile` está activo y CS1591 **no** está s
 |---|---|---|
 | 0 | Análisis y arquitectura | ✅ Completada |
 | 1 | Estructura de la solución | ✅ Completada |
-| 2 | Dominio, EF Core y primera migración | ⏳ Siguiente |
-| 3 | Autenticación, invitaciones y multi-tenancy | ⬜ |
+| 2 | Dominio, EF Core y primera migración | ✅ Completada |
+| 3 | Autenticación, invitaciones y multi-tenancy | ⏳ Siguiente |
 | 4 | API financiera | ⬜ |
 | 5 | Presupuestos, metas y recomendaciones | ⬜ |
 | 6 | Viajes y viabilidad | ⬜ |

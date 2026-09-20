@@ -4,12 +4,14 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 using Rumbo.Aplicacion.Comun;
+using Rumbo.Dominio;
 using Rumbo.Dominio.Comun;
 using Rumbo.Dominio.Entidades.Financiero;
 using Rumbo.Dominio.Entidades.Identidad;
 using Rumbo.Dominio.Entidades.Planificacion;
 using Rumbo.Dominio.Entidades.Soporte;
 using Rumbo.Infraestructura.Identidad;
+using Rumbo.Infraestructura.Persistencia.Semilla;
 
 namespace Rumbo.Infraestructura.Persistencia;
 
@@ -126,3 +128,138 @@ public class ContextoRumbo(
 
     /// <summary>Sugerencias del motor de recomendaciones.</summary>
     public DbSet<Recomendacion> Recomendaciones => Set<Recomendacion>();
+
+    /// <summary>Nombre del filtro global que aisla los datos por espacio.</summary>
+    public const string FiltroEspacio = "FiltroEspacio";
+
+    /// <summary>Nombre del filtro global que oculta los registros borrados logicamente.</summary>
+    public const string FiltroBorradoLogico = "FiltroBorradoLogico";
+
+    /// <summary>
+    /// Convenciones que se aplican a TODO el modelo antes de las configuraciones por entidad.
+    /// </summary>
+    /// <param name="configurador">Constructor de convenciones de EF Core.</param>
+    /// <remarks>
+    /// <para>
+    /// <b>Dinero con <c>decimal(19,4)</c>.</b> Se fija aqui una sola vez en lugar de repetirlo
+    /// en cada propiedad monetaria. Sin esta convencion, SQL Server usaria <c>decimal(18,2)</c>
+    /// por defecto y cualquier propiedad nueva heredaria ese formato sin que nadie lo notase.
+    /// Se usan 4 decimales, y no 2, porque los calculos intermedios (prorrateos, conversiones
+    /// de moneda, reparto de una cuota entre capital e intereses) pierden precision si se
+    /// redondea a centimos en cada paso.
+    /// </para>
+    /// <para>
+    /// <b>Nunca <c>float</c> ni <c>double</c> para dinero.</b> Son binarios y no pueden
+    /// representar 0,10 de forma exacta: sumar mil gastos acabaria dando un saldo que no
+    /// cuadra con la realidad por centimos.
+    /// </para>
+    /// <para>
+    /// <b>Textos con longitud maxima.</b> Por defecto EF Core generaria <c>nvarchar(max)</c>,
+    /// que no puede indexarse y desperdicia espacio. 256 es un limite razonable para nombres y
+    /// descripciones; donde haga falta mas, la configuracion de la entidad lo amplia.
+    /// </para>
+    /// </remarks>
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurador)
+    {
+        base.ConfigureConventions(configurador);
+
+        configurador.Properties<decimal>().HavePrecision(19, 4);
+        configurador.Properties<string>().HaveMaxLength(256);
+    }
+
+    /// <inheritdoc />
+    protected override void OnModelCreating(ModelBuilder constructor)
+    {
+        base.OnModelCreating(constructor);
+
+        // Cada entidad tiene su clase de configuracion en Persistencia/Configuraciones.
+        constructor.ApplyConfigurationsFromAssembly(typeof(ContextoRumbo).Assembly);
+
+        // Catalogo global de monedas: forma parte de la migracion para que todo
+        // entorno nuevo arranque con los mismos valores.
+        SemillaMonedas.Sembrar(constructor);
+
+        AplicarFiltrosGlobales(constructor);
+    }
+
+    /// <summary>
+    /// Aplica automaticamente el filtro de espacio y el de borrado logico a todas las
+    /// entidades del dominio que los necesitan.
+    /// </summary>
+    /// <param name="constructor">Constructor del modelo de EF Core.</param>
+    /// <remarks>
+    /// <para>
+    /// <b>Por que se descubren las entidades por reflexion sobre el ensamblado del dominio y
+    /// NO con <c>constructor.Model.GetEntityTypes()</c>.</b> Enumerar el modelo a medio
+    /// construir obliga a EF Core a materializar tipos que todavia no ha terminado de
+    /// clasificar. En .NET 10 eso rompe la configuracion de passkeys de ASP.NET Core Identity:
+    /// <c>IdentityPasskeyData</c>, que debe ser un tipo complejo, queda registrado como
+    /// entidad y el modelo falla al pedirle una clave primaria. Recorrer solo NUESTRAS
+    /// entidades evita tocar las de Identity y ademas deja explicito el conjunto al que se
+    /// aplica el aislamiento.
+    /// </para>
+    /// <para>
+    /// <b>Por que automatico y no filtro a filtro.</b> Si cada filtro se escribiera a mano,
+    /// anadir una entidad nueva y olvidar el suyo provocaria una fuga de datos entre hogares
+    /// sin que nada avisara. Asi basta con marcar la entidad con
+    /// <see cref="IEntidadDeEspacio"/>.
+    /// </para>
+    /// <para>
+    /// <b>Filtros con nombre.</b> EF Core 10 permite varios filtros por entidad si se les da
+    /// nombre. Se usan dos separados para poder desactivar uno sin el otro: la reconciliacion
+    /// necesita ver registros borrados de SU espacio, y eso no debe obligar a desactivar
+    /// tambien el aislamiento.
+    /// </para>
+    /// <para>
+    /// <b>Como se lee el espacio activo.</b> La expresion referencia la instancia del
+    /// contexto. EF Core detecta esa referencia y la sustituye por el contexto que ejecuta
+    /// cada consulta, de modo que el filtro no queda congelado con el valor de la primera
+    /// peticion aunque el modelo se cachee.
+    /// </para>
+    /// <para>
+    /// <b>Si no hay espacio activo</b> (peticion anonima, inicio de sesion), el valor es
+    /// <c>null</c>, la comparacion no encuentra ninguna fila y no se devuelve nada. Ante la
+    /// duda, no se muestra informacion.
+    /// </para>
+    /// </remarks>
+    private void AplicarFiltrosGlobales(ModelBuilder constructor)
+    {
+        var entidadesDelDominio = typeof(MarcadorDominio).Assembly
+            .GetTypes()
+            .Where(tipo => tipo is { IsClass: true, IsAbstract: false }
+                           && (typeof(IEntidadDeEspacio).IsAssignableFrom(tipo)
+                               || typeof(IBorradoLogico).IsAssignableFrom(tipo)));
+
+        foreach (var tipoClr in entidadesDelDominio)
+        {
+            var constructorEntidad = constructor.Entity(tipoClr);
+            var parametro = Expression.Parameter(tipoClr, "e");
+
+            if (typeof(IEntidadDeEspacio).IsAssignableFrom(tipoClr))
+            {
+                // e.EspacioId == contextoActual.ContextoEspacio.EspacioId
+                var espacioDeLaFila = Expression.Convert(
+                    Expression.Property(parametro, nameof(IEntidadDeEspacio.EspacioId)),
+                    typeof(Guid?));
+
+                var espacioActivo = Expression.Property(
+                    Expression.Property(Expression.Constant(this), nameof(ContextoEspacio)),
+                    nameof(IContextoEspacio.EspacioId));
+
+                constructorEntidad.HasQueryFilter(
+                    FiltroEspacio,
+                    Expression.Lambda(Expression.Equal(espacioDeLaFila, espacioActivo), parametro));
+            }
+
+            if (typeof(IBorradoLogico).IsAssignableFrom(tipoClr))
+            {
+                // !e.Eliminado
+                constructorEntidad.HasQueryFilter(
+                    FiltroBorradoLogico,
+                    Expression.Lambda(
+                        Expression.Not(Expression.Property(parametro, nameof(IBorradoLogico.Eliminado))),
+                        parametro));
+            }
+        }
+    }
+}

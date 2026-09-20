@@ -5,6 +5,16 @@
     (base de datos con EF Core, envio de correo, tokens JWT, tasas de cambio...).
   -->
 
+  <!--
+    Referencia al framework compartido de ASP.NET Core. Hace falta para los proveedores de
+    token de Identity (restablecimiento de clave, confirmacion de correo) y, desde la Fase 3,
+    para la emision y validacion de JWT. No convierte este proyecto en una aplicacion web:
+    solo le da acceso a esas bibliotecas.
+  -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" />
