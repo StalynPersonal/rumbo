@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 
 using Rumbo.Aplicacion.Comun;
 using Rumbo.Aplicacion.Contratos;
+using Rumbo.Contratos.Administracion;
+using Rumbo.Contratos.Comun;
 using Rumbo.Contratos.Correo;
 using Rumbo.Contratos.Invitaciones;
 using Rumbo.Infraestructura.Identidad;
@@ -27,6 +29,7 @@ namespace Rumbo.Api.Controladores.V1;
 /// </remarks>
 /// <param name="invitaciones">Servicio de invitaciones.</param>
 /// <param name="correo">Servicio de configuracion de correo.</param>
+/// <param name="administracion">Servicio de gestion de la plataforma.</param>
 /// <param name="usuarioActual">Identidad de quien llama.</param>
 [ApiController]
 [Route("api/v1/administracion")]
@@ -35,6 +38,7 @@ namespace Rumbo.Api.Controladores.V1;
 public class AdministracionController(
     IServicioInvitaciones invitaciones,
     IServicioConfiguracionCorreo correo,
+    IServicioAdministracion administracion,
     IUsuarioActual usuarioActual) : ControllerBase
 {
     /// <summary>Invita a alguien a crear su propio espacio.</summary>
@@ -124,4 +128,94 @@ public class AdministracionController(
         [FromBody] SolicitudProbarCorreo solicitud,
         CancellationToken cancelacion) =>
         Ok(await correo.ProbarPlataformaAsync(solicitud, cancelacion));
+
+    /// <summary>Lista los espacios de la plataforma.</summary>
+    /// <param name="busqueda">Texto a buscar en el nombre.</param>
+    /// <param name="pagina">Número de página.</param>
+    /// <param name="tamanoPagina">Elementos por página.</param>
+    /// <param name="cancelacion">Token de cancelación.</param>
+    /// <returns>Una página de espacios.</returns>
+    /// <remarks>
+    /// <b>Sin ningún dato financiero</b>: nombre, tipo, estado, número de miembros y correo
+    /// del propietario, para poder contactarlo. Ni saldos, ni movimientos, ni metas.
+    /// </remarks>
+    [HttpGet("espacios")]
+    [ProducesResponseType<ResultadoPaginado<EspacioAdminResumen>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<ResultadoPaginado<EspacioAdminResumen>>> ListarEspacios(
+        [FromQuery] string? busqueda,
+        [FromQuery] int pagina = 1,
+        [FromQuery] int tamanoPagina = 50,
+        CancellationToken cancelacion = default) =>
+        Ok(await administracion.ListarEspaciosAsync(busqueda, pagina, tamanoPagina, cancelacion));
+
+    /// <summary>Suspende o reactiva un espacio.</summary>
+    /// <param name="id">Espacio afectado.</param>
+    /// <param name="solicitud">Estado nuevo y motivo.</param>
+    /// <param name="cancelacion">Token de cancelación.</param>
+    /// <returns>El espacio actualizado.</returns>
+    /// <remarks>
+    /// Suspender corta el acceso de <b>todos</b> sus miembros en su siguiente petición, sin
+    /// borrar nada. Es reversible: los datos siguen intactos.
+    /// </remarks>
+    [HttpPut("espacios/{id:guid}/estado")]
+    [ProducesResponseType<EspacioAdminResumen>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<EspacioAdminResumen>> CambiarEstadoEspacio(
+        Guid id,
+        [FromBody] SolicitudCambiarEstadoEspacio solicitud,
+        CancellationToken cancelacion) =>
+        Ok(await administracion.CambiarEstadoEspacioAsync(id, solicitud, cancelacion));
+
+    /// <summary>Lista las cuentas de usuario.</summary>
+    /// <param name="busqueda">Texto a buscar en el correo o el nombre.</param>
+    /// <param name="pagina">Número de página.</param>
+    /// <param name="tamanoPagina">Elementos por página.</param>
+    /// <param name="cancelacion">Token de cancelación.</param>
+    /// <returns>Una página de usuarios.</returns>
+    [HttpGet("usuarios")]
+    [ProducesResponseType<ResultadoPaginado<UsuarioAdminResumen>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<ResultadoPaginado<UsuarioAdminResumen>>> ListarUsuarios(
+        [FromQuery] string? busqueda,
+        [FromQuery] int pagina = 1,
+        [FromQuery] int tamanoPagina = 50,
+        CancellationToken cancelacion = default) =>
+        Ok(await administracion.ListarUsuariosAsync(busqueda, pagina, tamanoPagina, cancelacion));
+
+    /// <summary>Habilita o deshabilita una cuenta.</summary>
+    /// <param name="id">Usuario afectado.</param>
+    /// <param name="activo">Si la cuenta queda habilitada.</param>
+    /// <param name="cancelacion">Token de cancelación.</param>
+    /// <returns>El usuario actualizado.</returns>
+    /// <remarks>
+    /// Deshabilitar revoca todas sus sesiones de inmediato. Un administrador no puede
+    /// deshabilitarse a sí mismo: si fuera el único, la plataforma se quedaría sin nadie
+    /// capaz de emitir invitaciones.
+    /// </remarks>
+    [HttpPut("usuarios/{id:guid}/estado")]
+    [ProducesResponseType<UsuarioAdminResumen>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<UsuarioAdminResumen>> CambiarEstadoUsuario(
+        Guid id,
+        [FromQuery] bool activo,
+        CancellationToken cancelacion) =>
+        Ok(await administracion.CambiarEstadoUsuarioAsync(
+            id, activo, usuarioActual.ObtenerUsuarioObligatorio(), cancelacion));
+
+    /// <summary>Devuelve los recuentos agregados de la plataforma.</summary>
+    /// <param name="cancelacion">Token de cancelación.</param>
+    /// <returns>Las métricas.</returns>
+    /// <remarks>
+    /// Son <b>recuentos, nunca importes</b>. Saber cuántos hogares hay es gestión; saber
+    /// cuánto dinero mueven sería entrar en sus finanzas.
+    /// </remarks>
+    [HttpGet("metricas")]
+    [ProducesResponseType<MetricasPlataforma>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<MetricasPlataforma>> ObtenerMetricas(
+        CancellationToken cancelacion) =>
+        Ok(await administracion.ObtenerMetricasAsync(cancelacion));
 }

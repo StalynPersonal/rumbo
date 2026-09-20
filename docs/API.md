@@ -73,6 +73,20 @@ El token va en `Authorization: Bearer <token>`.
 
 El código en claro se devuelve **una sola vez**, al crearla.
 
+## Perfil de usuario
+
+| Ruta | Qué hace |
+|---|---|
+| `GET /usuarios/yo` | Perfil de quien llama |
+| `PUT /usuarios/yo` | Cambia nombre y cultura |
+
+**Solo el propio perfil.** No hay ninguna ruta que reciba un identificador de usuario: una
+persona no tiene por qué consultar los datos de otra, ni siquiera de su mismo hogar. Para ver
+a los demás miembros está `GET /espacios/actual/miembros`, que devuelve lo justo.
+
+El correo no se cambia aquí: es la credencial de acceso, y modificarlo sin verificar la
+dirección nueva permitiría secuestrar una cuenta.
+
 ## Administración de plataforma
 
 Reservado al rol `AdministradorPlataforma`. **No incluye ningún endpoint que devuelva datos
@@ -85,6 +99,18 @@ financieros**: ese rol gestiona altas, no finanzas.
 | `DELETE /administracion/invitaciones/{id}` | Anula una pendiente |
 | `GET/PUT /administracion/correo` | SMTP de la plataforma |
 | `POST /administracion/correo/probar` | Comprueba la conexión |
+| `GET /administracion/espacios` | Lista los hogares, **sin datos financieros** |
+| `PUT /administracion/espacios/{id}/estado` | Suspende o reactiva un hogar |
+| `GET /administracion/usuarios` | Lista las cuentas |
+| `PUT /administracion/usuarios/{id}/estado?activo=` | Habilita o deshabilita una cuenta |
+| `GET /administracion/metricas` | Recuentos agregados |
+
+**Suspender un espacio** corta el acceso de todos sus miembros en su siguiente petición, sin
+borrar nada, y es reversible. **Deshabilitar una cuenta** revoca todas sus sesiones de
+inmediato; un administrador no puede deshabilitarse a sí mismo.
+
+Las métricas son **recuentos, nunca importes**: saber cuántos hogares hay es gestión, saber
+cuánto dinero mueven sería entrar en sus finanzas.
 
 ## Cuentas
 

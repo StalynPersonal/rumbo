@@ -55,11 +55,16 @@ public class CacheMembresias(IMemoryCache cache)
 
         // MembresiasEspacio es una tabla GLOBAL, sin filtro de aislamiento: tiene que serlo,
         // porque se consulta justo para averiguar a que espacio puede entrar alguien.
+        //
+        // Se comprueba TAMBIEN que el espacio este activo. Sin esta condicion, suspender un
+        // espacio no serviria de nada: sus miembros seguirian entrando porque su membresia
+        // sigue siendo valida.
         var rol = await baseDatos.MembresiasEspacio
             .AsNoTracking()
             .Where(m => m.UsuarioId == usuarioId
                         && m.EspacioId == espacioId
-                        && m.Estado == EstadoMembresia.Activa)
+                        && m.Estado == EstadoMembresia.Activa
+                        && m.Espacio!.Estado == EstadoEspacio.Activo)
             .Select(m => (RolEspacio?)m.Rol)
             .FirstOrDefaultAsync();
 

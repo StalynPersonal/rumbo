@@ -468,3 +468,34 @@ expresión, nunca un método.
 **Por qué.** «Una transferencia no es un gasto» es la regla que más fácil se rompe: basta con
 que alguien escriba un informe nuevo y filtre a mano. Escrita una sola vez, olvidarla exige
 saltársela a propósito.
+
+---
+
+## D30 — El estado del espacio se comprueba en cada petición
+**Fecha:** 2026-09-20 · **Estado:** aceptada
+
+**Problema encontrado.** `EstadoEspacio.Suspendido` existía en el modelo desde la Fase 2, pero
+**no hacía nada**: el middleware comprobaba que la membresía estuviera activa y no miraba el
+estado del espacio. Suspender un hogar no le quitaba el acceso a nadie.
+
+**Decisión.** `CacheMembresias` exige ahora que el espacio esté activo, además de la membresía.
+Al suspender, se invalida la caché de todos sus miembros para que el corte sea inmediato.
+
+**Lección.** Un campo de estado sin nada que lo consulte es peor que no tenerlo: da la falsa
+sensación de que la función existe. Ahora hay una prueba que lo verifica de punta a punta.
+
+---
+
+## D31 — El administrador de plataforma gestiona, pero nunca ve finanzas
+**Fecha:** 2026-09-20 · **Estado:** aceptada
+
+**Decisión.** Los endpoints de administración devuelven nombre, tipo, estado, número de
+miembros y correo del propietario —para poder contactarlo— y **ningún importe**. Las métricas
+son recuentos.
+
+**Por qué el correo del propietario sí.** Si un hogar tiene un problema, hay que poder
+escribirle. Es un dato de contacto, no financiero.
+
+**Verificación.** `ElAdministradorVeLosEspaciosSinDatosFinancieros` registra una cuenta con un
+saldo reconocible y comprueba que ese número **no aparece en el JSON en crudo** de la respuesta
+del administrador.
