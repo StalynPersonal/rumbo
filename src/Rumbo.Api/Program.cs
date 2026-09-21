@@ -3,6 +3,7 @@ using System.Reflection;
 using Rumbo.Api.Extensiones;
 using Rumbo.Api.Middleware;
 using Rumbo.Infraestructura.MultiEspacio;
+using Rumbo.Infraestructura.Persistencia;
 using Rumbo.Infraestructura.Persistencia.Semilla;
 
 // ---------------------------------------------------------------------------
@@ -17,6 +18,12 @@ using Rumbo.Infraestructura.Persistencia.Semilla;
 
 var constructor = WebApplication.CreateBuilder(args);
 
+// --- Azure (opcional) -------------------------------------------------------
+// Key Vault se anade ANTES de registrar los servicios, porque la clave de firma del token y
+// la cadena de conexion salen de ahi en produccion y se leen durante el registro.
+constructor.AgregarKeyVault();
+constructor.AgregarTelemetria();
+
 // --- Servicios (inyeccion de dependencias) ---------------------------------
 
 constructor.Services.AgregarServiciosDeApi(constructor.Configuration);
@@ -25,6 +32,11 @@ var aplicacion = constructor.Build();
 
 // Roles de plataforma y primer administrador. Sin el, nadie podria emitir la primera
 // invitacion y el sistema quedaria inaccesible, porque Rumbo no tiene registro publico.
+//
+// NOTA: aqui NO se aplican migraciones. Se aplican desde el despliegue, con un script SQL
+// generado y revisado. Migrar al arrancar parece comodo, pero con varias instancias dos
+// procesos podrian migrar a la vez, y un despliegue fallido dejaria la base a medias sin
+// que nadie lo hubiera aprobado. Ver docs/DESPLIEGUE.md.
 await SembradorInicial.SembrarAsync(aplicacion.Services);
 
 // --- Tuberia de peticiones (middleware) ------------------------------------
@@ -89,6 +101,38 @@ aplicacion.MapGet("/salud", () => Results.Ok(new
     fechaHora = DateTimeOffset.UtcNow,
 }))
 .WithName("ConsultarSalud")
+.WithTags("Salud");
+
+// --- Comprobacion de preparacion --------------------------------------------
+// A diferencia de /salud, esta SI toca la base de datos. Son dos cosas distintas y por eso
+// hay dos endpoints: Azure usa /salud para saber si el proceso vive —si fallara porque la
+// base esta caida, reiniciaria la aplicacion sin arreglar nada—, y /salud/preparada sirve
+// para diagnosticar y para decidir si una instancia recien desplegada puede recibir
+// trafico.
+aplicacion.MapGet("/salud/preparada", async (
+    ContextoRumbo contexto,
+    CancellationToken cancelacion) =>
+{
+    try
+    {
+        var conecta = await contexto.Database.CanConnectAsync(cancelacion);
+
+        return conecta
+            ? Results.Ok(new { estado = "Preparada", baseDeDatos = "Accesible" })
+            : Results.Json(
+                new { estado = "NoPreparada", baseDeDatos = "Inaccesible" },
+                statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+    catch (Exception excepcion)
+    {
+        // Se devuelve el tipo de excepcion, nunca el mensaje: una cadena de conexion mal
+        // formada puede llevar dentro un nombre de servidor o un usuario.
+        return Results.Json(
+            new { estado = "NoPreparada", error = excepcion.GetType().Name },
+            statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+})
+.WithName("ConsultarPreparacion")
 .WithTags("Salud");
 
 aplicacion.Run();

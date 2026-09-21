@@ -1,0 +1,159 @@
+# Despliegue del backend a Azure App Service.
+#
+# Se dispara solo a mano (workflow_dispatch). Desplegar automaticamente en cada push a main
+# es comodo hasta el dia que alguien mezcla una rama a medias: en una aplicacion que guarda
+# el dinero de una familia, el despliegue se decide, no se hereda de un merge.
+#
+# Autenticacion con OIDC (federacion de identidades), sin ningun secreto de Azure guardado
+# en GitHub: se pide un token de corta duracion en cada ejecucion. Ver docs/DESPLIEGUE.md.
+name: Backend Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmar:
+        description: 'Escribe DESPLEGAR para confirmar'
+        required: true
+        default: ''
+
+permissions:
+  # Necesario para pedir el token de OIDC a GitHub.
+  id-token: write
+  contents: read
+
+env:
+  APLICACION: rumbo-api
+  GRUPO_RECURSOS: rumbo-rg
+  PROYECTO_API: src/Rumbo.Api/Rumbo.Api.csproj
+  PROYECTO_INFRAESTRUCTURA: src/Rumbo.Infraestructura/Rumbo.Infraestructura.csproj
+
+jobs:
+  verificar:
+    name: Verificar antes de desplegar
+    runs-on: windows-latest
+
+    steps:
+      - name: Comprobar la confirmacion
+        shell: bash
+        run: |
+          if [ "${{ github.event.inputs.confirmar }}" != "DESPLEGAR" ]; then
+            echo "No se confirmo el despliegue. Escribe DESPLEGAR para continuar."
+            exit 1
+          fi
+
+      - name: Descargar el codigo
+        uses: actions/checkout@v4
+
+      - name: Instalar el SDK de .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restaurar paquetes
+        run: dotnet restore
+
+      - name: Compilar
+        run: dotnet build --configuration Release --no-restore
+
+      # Las pruebas de integracion necesitan SQL Server y no corren aqui; de eso se encarga
+      # backend-ci.yml. Aqui se ejecutan las que no dependen de una base de datos, porque
+      # desplegar sin comprobar nada seria peor.
+      - name: Probar (unitarias y de arquitectura)
+        run: |
+          dotnet test pruebas/Rumbo.PruebasUnitarias --configuration Release --no-build
+          dotnet test pruebas/Rumbo.PruebasArquitectura --configuration Release --no-build
+
+  desplegar:
+    name: Publicar en App Service
+    needs: verificar
+    runs-on: windows-latest
+    environment: produccion
+
+    steps:
+      - name: Descargar el codigo
+        uses: actions/checkout@v4
+
+      - name: Instalar el SDK de .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Instalar la herramienta de EF Core
+        run: dotnet tool install --global dotnet-ef
+
+      # El script se genera, se publica como artefacto y se aplica APARTE. Aplicar
+      # migraciones desde el arranque de la aplicacion es lo que provoca que dos instancias
+      # migren a la vez o que una base quede a medias sin que nadie lo haya aprobado.
+      - name: Generar el script de migracion
+        run: >
+          dotnet ef migrations script
+          --idempotent
+          --project ${{ env.PROYECTO_INFRAESTRUCTURA }}
+          --startup-project ${{ env.PROYECTO_API }}
+          --output migracion.sql
+
+      - name: Guardar el script para revisarlo
+        uses: actions/upload-artifact@v4
+        with:
+          name: script-de-migracion
+          path: migracion.sql
+          retention-days: 90
+
+      - name: Publicar la aplicacion
+        run: >
+          dotnet publish ${{ env.PROYECTO_API }}
+          --configuration Release
+          --output ${{ github.workspace }}/publicacion
+
+      - name: Iniciar sesion en Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # Se despliega primero a una ranura de preparacion y despues se intercambia. Asi la
+      # aplicacion nueva arranca y calienta ANTES de recibir trafico, y si algo va mal el
+      # intercambio se deshace en segundos en vez de tener que volver a desplegar.
+      - name: Desplegar a la ranura de preparacion
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.APLICACION }}
+          slot-name: preparacion
+          package: ${{ github.workspace }}/publicacion
+
+      - name: Comprobar que la ranura responde
+        shell: bash
+        run: |
+          url="https://${{ env.APLICACION }}-preparacion.azurewebsites.net/salud/preparada"
+
+          for intento in $(seq 1 10); do
+            codigo=$(curl -s -o /dev/null -w "%{http_code}" "$url" || echo "000")
+            echo "Intento $intento: HTTP $codigo"
+
+            if [ "$codigo" = "200" ]; then
+              exit 0
+            fi
+
+            sleep 15
+          done
+
+          echo "La ranura de preparacion no respondio correctamente. No se intercambia."
+          exit 1
+
+      - name: Intercambiar preparacion con produccion
+        run: >
+          az webapp deployment slot swap
+          --resource-group ${{ env.GRUPO_RECURSOS }}
+          --name ${{ env.APLICACION }}
+          --slot preparacion
+          --target-slot production
+
+      - name: Comprobar produccion
+        shell: bash
+        run: |
+          url="https://${{ env.APLICACION }}.azurewebsites.net/salud/preparada"
+          codigo=$(curl -s -o /dev/null -w "%{http_code}" "$url" || echo "000")
+
+          echo "Produccion: HTTP $codigo"
+          test "$codigo" = "200"

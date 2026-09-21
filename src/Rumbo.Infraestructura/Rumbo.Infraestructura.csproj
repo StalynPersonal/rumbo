@@ -21,6 +21,15 @@
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
     <PackageReference Include="MailKit" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" />
+    <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" />
+    <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Keys" />
+
+    <!--
+      Alias de ensamblado. Azure.Core y Azure.Identity publican ambos el tipo
+      DefaultAzureCredential, y sin alias el compilador no sabe cual elegir (CS0433).
+      Con el alias se dice explicitamente de que ensamblado se toma.
+    -->
+    <PackageReference Include="Azure.Identity" Aliases="identidadazure" />
   </ItemGroup>
 
   <ItemGroup>

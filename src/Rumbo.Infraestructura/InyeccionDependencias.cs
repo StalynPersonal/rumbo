@@ -26,6 +26,7 @@ using Rumbo.Aplicacion.Recomendaciones.Reglas;
 using Microsoft.IdentityModel.Tokens;
 
 using Rumbo.Aplicacion.Contratos;
+using Rumbo.Infraestructura.Azure;
 using Rumbo.Infraestructura.Correo;
 using Rumbo.Infraestructura.Identidad;
 using Rumbo.Infraestructura.MultiEspacio;
@@ -114,12 +115,10 @@ public static class InyeccionDependencias
         // esos tokens con Data Protection, asi que hay que registrarla explicitamente:
         // AddIdentityCore no lo hace por su cuenta.
         //
-        // ATENCION para la Fase 10: por defecto las claves se guardan en el sistema de
-        // ficheros local. En Azure App Service eso significa que se pierden al reiniciar y
-        // que no se comparten entre instancias, de modo que un enlace de "olvide mi clave"
-        // dejaria de funcionar sin motivo aparente. Alli hay que persistirlas en Blob Storage
-        // y protegerlas con Key Vault.
-        servicios.AddDataProtection();
+        // Donde se guardan las claves depende de la configuracion: en local, el sistema de
+        // ficheros; en Azure, Blob Storage cifrado con Key Vault. Ver ProteccionDeDatos y
+        // docs/DESPLIEGUE.md.
+        servicios.AgregarProteccionDeDatos(configuracion);
 
         // La capa de aplicacion trabaja contra la interfaz; se resuelve al MISMO contexto
         // de la peticion, de modo que comparte transaccion y rastreador de cambios con los

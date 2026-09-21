@@ -29,6 +29,20 @@
   </ItemGroup>
 
   <ItemGroup Label="Persistencia e identidad">
+    <!-- Azure: secretos, claves de cifrado, almacenamiento y telemetria (Fase 10). -->
+    <PackageVersion Include="Azure.Identity" Version="1.17.1" />
+    <PackageVersion Include="Azure.Extensions.AspNetCore.Configuration.Secrets" Version="1.4.0" />
+    <PackageVersion Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" Version="1.5.4" />
+    <PackageVersion Include="Azure.Extensions.AspNetCore.DataProtection.Keys" Version="1.6.0" />
+    <PackageVersion Include="Microsoft.ApplicationInsights.AspNetCore" Version="2.23.0" />
+
+    <!--
+      Se fija explicitamente porque Azure.Extensions.AspNetCore.DataProtection.Keys arrastra
+      la 8.0.2, que tiene vulnerabilidades conocidas de gravedad alta. Sin esta linea, el
+      paquete vulnerable entraria por la puerta de atras como dependencia transitiva.
+    -->
+    <PackageVersion Include="System.Security.Cryptography.Xml" Version="10.0.10" />
+
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.12" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.12" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.12" />

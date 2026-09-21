@@ -347,8 +347,10 @@ espacio: metas, presupuestos, viajes, deudas, informes y panel.
 
 | Tarea | Fase | Riesgo si se olvida |
 |---|---|---|
-| Persistir las claves de Data Protection en Blob Storage | 10 | **Crítico.** Además de romper los enlaces de «olvidé mi clave», las contraseñas SMTP guardadas dejarían de poder descifrarse al reiniciar, y habría que volver a introducirlas |
-| SPF y DKIM del dominio remitente | 10 | Los correos de invitación acabarían en spam |
-| Identidad administrada para Key Vault y Azure SQL | 10 | Secretos en la configuración |
+| Persistir las claves de Data Protection en Blob Storage | 10 | **Resuelto en código** (D55): `PersistKeysToAzureBlobStorage` + `ProtectKeysWithAzureKeyVault`. Queda **crear los recursos**; hasta entonces, en App Service las contraseñas SMTP se perderían en cada reinicio |
+| Identidad administrada para Key Vault y Azure SQL | 10 | **Resuelto en código** (D58). Queda asignar los roles y crear el usuario externo en SQL: `docs/DESPLIEGUE.md` §7 |
+| SPF y DKIM del dominio remitente | 10 | Los correos de invitación acabarían en spam. Documentado en `docs/DESPLIEGUE.md` §12; no es código, es DNS |
+| Mínimo privilegio del usuario de SQL | 10 | La aplicación solo debe tener `db_datareader` y `db_datawriter`. Está en la guía; si se salta ese paso, una futura inyección podría borrar tablas |
 | Segundo factor para el administrador de plataforma | Posterior | Es la cuenta con más alcance del sistema |
 | Limitador distribuido, si algún día hay más de una instancia | Posterior | El cupo actual es por proceso: con dos instancias, el límite efectivo se duplica |
+| Revisión periódica de paquetes vulnerables | Continuo | En la Fase 10 entró `System.Security.Cryptography.Xml 8.0.2` como dependencia transitiva, con siete vulnerabilidades altas (D60). Lo cazó `TreatWarningsAsErrors`; conviene no desactivarlo nunca |

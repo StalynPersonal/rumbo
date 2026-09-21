@@ -14,6 +14,10 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" />
+    <!-- Alias de ensamblado: ver la nota en Rumbo.Infraestructura.csproj (CS0433). -->
+    <PackageReference Include="Azure.Identity" Aliases="identidadazure" />
+    <PackageReference Include="Azure.Extensions.AspNetCore.Configuration.Secrets" />
+    <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" />
   </ItemGroup>
 
   <ItemGroup>

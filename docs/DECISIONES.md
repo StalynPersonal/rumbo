@@ -897,3 +897,135 @@ creadas en la última hora sea cual sea su estado.
 **Por qué.** El tope de pendientes acota cuántas puertas quedan abiertas a la vez, pero no
 cuántos correos salen: bastaba con anular las veinte pendientes y volver a crearlas en bucle. Se
 cuentan también las anuladas porque anular una invitación no deshace el correo que ya salió.
+
+
+---
+
+## D55 — Las claves de Data Protection se persisten en Blob Storage y se cifran con Key Vault
+**Fecha:** 2026-09-20 · **Estado:** aceptada
+
+**Contexto.** Era el riesgo crítico señalado desde la Fase 3. Data Protection cifra los tokens
+de «olvidé mi clave» y las contraseñas SMTP de cada espacio. Por defecto guarda sus claves en el
+sistema de ficheros local.
+
+**Por qué eso rompe en App Service.** Dos desastres, y ninguno de los dos da un error claro:
+
+1. Las claves se pierden en cada reinicio.
+2. No se comparten entre instancias.
+
+El síntoma no es una excepción, sino algo peor: enlaces de restablecimiento que dejan de
+funcionar «sin motivo», y contraseñas SMTP guardadas que un día no se pueden descifrar y hay que
+volver a introducir una por una.
+
+**Decisión.** `PersistKeysToAzureBlobStorage` más `ProtectKeysWithAzureKeyVault`, activados
+**solo** si hay configuración de Azure. Sin ella se usa el sistema de ficheros, que es lo
+correcto en desarrollo y en las pruebas.
+
+También se fija `SetApplicationName("Rumbo")` a mano: el valor por defecto en App Service
+depende de la ruta física del sitio, y si cambiara la aplicación dejaría de reconocer sus
+propias claves.
+
+**Por qué además se cifra con Key Vault.** Sin eso, el fichero de claves queda en el blob **en
+claro**: quien pudiera leer el contenedor podría descifrar todo lo que protege Data Protection.
+Con eso, hace falta además permiso sobre la clave.
+
+---
+
+## D56 — Las migraciones no se aplican al arrancar
+**Fecha:** 2026-09-20 · **Estado:** aceptada
+
+**Decisión.** `Program.cs` siembra roles y el administrador inicial, pero **no** llama a
+`Migrate()`. El script se genera con `dotnet ef migrations script --idempotent`, se publica como
+artefacto del despliegue y se aplica aparte.
+
+**Por qué.** Migrar al arrancar parece cómodo y tiene dos problemas serios: con varias
+instancias, dos procesos pueden migrar a la vez; y un despliegue fallido deja la base a medias
+sin que nadie haya aprobado el cambio. En una aplicación que guarda el dinero de una familia, un
+`ALTER COLUMN` merece que alguien lo lea antes.
+
+`--idempotent` permite ejecutar el script dos veces sin romper nada.
+
+---
+
+## D57 — Dos endpoints de salud, no uno
+**Fecha:** 2026-09-20 · **Estado:** aceptada
+
+**Decisión.** `/salud` dice si el proceso vive y no toca la base de datos. `/salud/preparada`
+además comprueba que se llega a SQL. App Service usa el **primero** como comprobación de vida; el
+despliegue usa el **segundo** antes de intercambiar ranuras.
+
+**Por qué.** Si la comprobación de vida consultara la base, una caída momentánea de SQL haría que
+Azure reiniciara la aplicación. Reiniciar no arregla una base caída y encima tira las sesiones en
+curso. Son dos preguntas distintas: «¿este proceso responde?» y «¿esta instancia puede atender
+tráfico?».
+
+`/salud/preparada` devuelve el **tipo** de la excepción, nunca el mensaje: una cadena de conexión
+mal formada puede llevar dentro el nombre del servidor o un usuario.
+
+---
+
+## D58 — Identidad administrada en todo, y la aplicación no puede cambiar el esquema
+**Fecha:** 2026-09-20 · **Estado:** aceptada
+
+**Decisión.** App Service accede a Key Vault, a Blob Storage y a Azure SQL con su identidad
+administrada. La cadena de conexión **no lleva contraseña**. El usuario de base de datos de la
+aplicación tiene solo `db_datareader` y `db_datawriter`.
+
+**Por qué el mínimo privilegio en SQL.** Si la aplicación pudiera cambiar el esquema, una
+vulnerabilidad de inyección —hoy no hay ninguna, pero mañana existirá código nuevo— podría borrar
+tablas en vez de solo leer filas. Las migraciones las aplica una persona con una identidad
+distinta.
+
+GitHub Actions se autentica por **federación de identidades** (OIDC): no hay ninguna credencial
+de Azure guardada en el repositorio, se pide un token de corta duración en cada ejecución, y la
+confianza está limitada al entorno `produccion` de este repositorio concreto.
+
+---
+
+## D59 — El despliegue se dispara a mano, no en cada push
+**Fecha:** 2026-09-20 · **Estado:** aceptada
+
+**Decisión.** `backend-deploy.yml` solo se ejecuta con `workflow_dispatch` y exige escribir
+`DESPLEGAR` para confirmar. Despliega primero a una ranura de preparación, comprueba
+`/salud/preparada` y solo entonces la intercambia con producción.
+
+**Por qué.** Desplegar en cada push a `main` es cómodo hasta el día que alguien mezcla una rama a
+medias. Y con ranura de intercambio, la versión nueva arranca y calienta **antes** de recibir
+tráfico; si algo va mal, el mismo comando de intercambio la deshace en segundos, en lugar de
+tener que volver a desplegar la anterior.
+
+---
+
+## D60 — Se fija `System.Security.Cryptography.Xml` para no heredar una versión vulnerable
+**Fecha:** 2026-09-20 · **Estado:** aceptada
+
+**Contexto.** Al añadir `Azure.Extensions.AspNetCore.DataProtection.Keys`, la restauración
+falló: el paquete arrastraba `System.Security.Cryptography.Xml 8.0.2`, que tiene **siete
+vulnerabilidades conocidas de gravedad alta**.
+
+**Decisión.** Se fija la versión 10.0.10 en `Directory.Packages.props`.
+
+**Por qué.** El paquete vulnerable entraba como dependencia transitiva, es decir, por la puerta
+de atrás: nadie lo había pedido y no aparecía en ningún `.csproj`. Lo detectó
+`TreatWarningsAsErrors` convirtiendo el aviso NU1903 en un error de compilación, que es
+exactamente para lo que está.
+
+También hubo que alinear `Azure.Identity` a 1.17.1, porque `Microsoft.Data.SqlClient` ya exigía
+esa versión y la gestión central de paquetes rechaza las bajadas silenciosas de versión.
+
+---
+
+## D61 — Alias de ensamblado para `DefaultAzureCredential`
+**Fecha:** 2026-09-20 · **Estado:** aceptada
+
+**Contexto.** `Azure.Core` y `Azure.Identity` publican ambos el tipo `DefaultAzureCredential`, y
+el compilador no puede elegir (error CS0433).
+
+**Decisión.** Se declara un alias de ensamblado (`Aliases="identidadazure"` en el
+`PackageReference`, más `extern alias identidadazure;` en el fichero) y se usa el tipo a través
+de él.
+
+**Por qué no se quitó una de las dos referencias.** Ambos paquetes llegan de todas formas como
+dependencias de los paquetes de Data Protection, así que la ambigüedad seguiría existiendo. El
+alias dice explícitamente de qué ensamblado se toma el tipo, que es la solución que el propio
+lenguaje ofrece para esto.
