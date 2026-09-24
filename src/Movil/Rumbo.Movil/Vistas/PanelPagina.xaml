@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<ContentPage
+    x:Class="Rumbo.Movil.Vistas.PanelPagina"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="{Binding NombreEspacio}">
+
+    <!--
+        RefreshView da el gesto de "tirar hacia abajo para recargar", que en Android es lo
+        que la gente intenta por instinto. Se enlaza al mismo comando que el boton.
+    -->
+    <RefreshView Command="{Binding CargarComando}" IsRefreshing="{Binding EstaCargando}">
+        <ScrollView>
+            <VerticalStackLayout Padding="20" Spacing="16">
+
+                <Label
+                    Text="{Binding MensajeError}"
+                    IsVisible="{Binding HayError}"
+                    TextColor="#B3261E" />
+
+                <!-- Patrimonio -->
+                <Border Padding="16" StrokeShape="RoundRectangle 12">
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="Disponible" FontSize="13" />
+                        <Label Text="{Binding TotalDisponible}" FontSize="30" FontAttributes="Bold" />
+                        <Label Text="Patrimonio neto (ya restando deudas)" FontSize="12" Margin="0,8,0,0" />
+                        <Label Text="{Binding PatrimonioNeto}" FontSize="18" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Mes en curso -->
+                <Border Padding="16" StrokeShape="RoundRectangle 12">
+                    <Grid ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto" ColumnSpacing="8">
+                        <Label Grid.Row="0" Grid.Column="0" Text="Ingresos" FontSize="12" />
+                        <Label Grid.Row="0" Grid.Column="1" Text="Gastos" FontSize="12" />
+                        <Label Grid.Row="0" Grid.Column="2" Text="Balance" FontSize="12" />
+
+                        <Label Grid.Row="1" Grid.Column="0" Text="{Binding IngresosDelMes}" FontSize="15" />
+                        <Label Grid.Row="1" Grid.Column="1" Text="{Binding GastosDelMes}" FontSize="15" />
+                        <Label Grid.Row="1" Grid.Column="2" Text="{Binding BalanceDelMes}" FontSize="15" FontAttributes="Bold" />
+                    </Grid>
+                </Border>
+
+                <!-- Alertas de presupuesto, solo si las hay -->
+                <Border Padding="16" StrokeShape="RoundRectangle 12" IsVisible="{Binding TieneAlertas}">
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="Presupuestos que necesitan atención" FontAttributes="Bold" FontSize="14" />
+                        <Label Text="{Binding ResumenAlertas}" FontSize="13" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <ActivityIndicator
+                    IsVisible="{Binding EstaCargando}"
+                    IsRunning="{Binding EstaCargando}"
+                    HorizontalOptions="Center" />
+
+                <Button Text="Actualizar" Command="{Binding CargarComando}" />
+
+            </VerticalStackLayout>
+        </ScrollView>
+    </RefreshView>
+
+</ContentPage>

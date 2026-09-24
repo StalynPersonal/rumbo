@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<!--
+    LA PLANTILLA DE TODAS LAS PANTALLAS. Esta comentada a proposito; las demas siguen este
+    mismo patron sin repetir las explicaciones.
+
+    x:Class conecta este XAML con su clase de C#. Tienen que coincidir exactamente: si no,
+    el error que sale al compilar no dice nada util.
+-->
+<ContentPage
+    x:Class="Rumbo.Movil.Vistas.IniciarSesionPagina"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Entrar en Rumbo"
+    Shell.NavBarIsVisible="False">
+
+    <!--
+        ScrollView y no un layout normal: cuando sale el teclado del telefono, la pantalla
+        se queda a la mitad de alto. Sin esto, el boton de entrar queda debajo del teclado y
+        no hay forma de pulsarlo.
+    -->
+    <ScrollView>
+        <VerticalStackLayout Padding="24" Spacing="16" VerticalOptions="Center">
+
+            <Label Text="Rumbo" FontSize="40" FontAttributes="Bold" HorizontalOptions="Center" />
+
+            <Label
+                Text="Tus finanzas. Tus metas. Tu próximo destino."
+                FontSize="14"
+                HorizontalOptions="Center"
+                HorizontalTextAlignment="Center"
+                Margin="0,0,0,24" />
+
+            <!--
+                {Binding Correo} NO es texto: es una instruccion. Significa "busca una
+                propiedad llamada Correo en mi BindingContext y enlazate a ella".
+
+                El BindingContext se asigna en IniciarSesionPagina.xaml.cs y es el
+                ModeloVista. Asi que esto se conecta con IniciarSesionModeloVista.Correo.
+
+                Mode=TwoWay: lo que escribe la persona sube al ModeloVista, y lo que cambia
+                el ModeloVista baja a la pantalla. Sin TwoWay, escribir aqui no cambiaria
+                nada en C# y el boton nunca se habilitaria.
+            -->
+            <Entry
+                Placeholder="Correo"
+                Keyboard="Email"
+                Text="{Binding Correo, Mode=TwoWay}" />
+
+            <Entry
+                Placeholder="Contraseña"
+                IsPassword="True"
+                Text="{Binding Clave, Mode=TwoWay}" />
+
+            <!--
+                No hay ningun evento Click. El boton se enlaza a un COMANDO, que ademas
+                decide solo si esta habilitado. Por eso sale gris hasta que hay correo y
+                contrasena, y se desactiva mientras la peticion esta en curso.
+            -->
+            <Button
+                Text="Entrar"
+                Command="{Binding EntrarComando}"
+                Margin="0,8,0,0" />
+
+            <!--
+                La ruedita. IsVisible y IsRunning enlazados a EstaCargando, que ModeloVistaBase
+                enciende y apaga solo dentro de EjecutarAsync.
+            -->
+            <ActivityIndicator
+                IsVisible="{Binding EstaCargando}"
+                IsRunning="{Binding EstaCargando}"
+                HorizontalOptions="Center" />
+
+            <!--
+                El error, en rojo y visible. HayError es una propiedad calculada del
+                ModeloVista: en XAML no se puede escribir una condicion, asi que es mas
+                simple exponer un booleano que enredarse con convertidores.
+
+                Nada de fallos silenciosos: si algo va mal, la persona lo ve.
+            -->
+            <Label
+                Text="{Binding MensajeError}"
+                IsVisible="{Binding HayError}"
+                TextColor="#B3261E"
+                HorizontalTextAlignment="Center" />
+
+            <Label
+                Text="Para entrar en Rumbo necesitas una invitación."
+                FontSize="12"
+                HorizontalTextAlignment="Center"
+                Margin="0,24,0,0" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

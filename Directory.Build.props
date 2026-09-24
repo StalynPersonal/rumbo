@@ -6,7 +6,13 @@
     de esta carpeta, asi que no hay que repetir estas lineas en cada proyecto.
   -->
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <!--
+      El framework de destino se fija aqui para el backend, pero NO para la aplicacion
+      movil: esa usa TargetFrameworks (en plural, net10.0-android) y declarar tambien el
+      singular haria que MSBuild intentara compilar un net10.0 que no existe en su fichero
+      de dependencias.
+    -->
+    <TargetFramework Condition="!$(MSBuildProjectDirectory.Contains('Movil'))">net10.0</TargetFramework>
     <LangVersion>latest</LangVersion>
 
     <!-- Tipos de referencia nulables: el compilador avisa si algo puede ser null sin declararlo. -->
@@ -40,6 +46,17 @@
     metodo [Fact], porque el nombre del test ya describe lo que verifica.
   -->
   <PropertyGroup Condition="$(MSBuildProjectDirectory.Contains('pruebas'))">
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <!--
+    Excepcion para la aplicacion movil. El SDK de Android y los generadores de MAUI emiten
+    advertencias que no dependen de nuestro codigo, asi que tratarlas como errores
+    bloquearia la compilacion sin proteger nada. Las advertencias propias se siguen viendo.
+  -->
+  <PropertyGroup Condition="$(MSBuildProjectDirectory.Contains('Movil'))">
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>

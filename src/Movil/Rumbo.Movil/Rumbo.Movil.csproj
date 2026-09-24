@@ -1,0 +1,80 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!--
+      SOLO Android. La plantilla de MAUI genera tambien iOS, macOS y Windows, pero cada
+      plataforma extra multiplica el trabajo de probarla, y el objetivo del proyecto es un
+      APK para Android. Anadir otra plataforma mas adelante es una linea aqui.
+    -->
+    <TargetFrameworks>net10.0-android</TargetFrameworks>
+
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Rumbo.Movil</RootNamespace>
+    <UseMaui>true</UseMaui>
+    <SingleProject>true</SingleProject>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <!--
+      Genera el codigo del XAML al compilar en vez de interpretarlo al arrancar. Ademas de
+      ser mas rapido, convierte en error de compilacion algunos fallos del XAML que de otro
+      modo solo se verian al abrir la pantalla en el movil.
+    -->
+    <MauiXamlInflator>SourceGen</MauiXamlInflator>
+
+    <!--
+      La solucion entera trata las advertencias como errores, pero aqui no: el SDK de
+      Android y los generadores de MAUI emiten avisos que no dependen de nuestro codigo y
+      que no podemos arreglar. Bloquear la compilacion por ellos no protege nada.
+      Las advertencias de NUESTRO codigo se siguen viendo en la salida.
+    -->
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+
+    <!--
+      La documentacion XML obligatoria se aplica al backend, donde cada tipo publico es un
+      contrato. En la aplicacion movil el codigo lo lee una persona que esta aprendiendo:
+      los comentarios explican el porque, no rellenan un formulario.
+    -->
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+
+    <ApplicationTitle>Rumbo</ApplicationTitle>
+    <ApplicationId>com.rumbo.finanzas</ApplicationId>
+
+    <ApplicationDisplayVersion>1.0.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
+
+    <!-- Android 5.0 en adelante: cubre practicamente cualquier telefono en uso. -->
+    <SupportedOSPlatformVersion>21.0</SupportedOSPlatformVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#0F5132" />
+    <MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#0F5132" BaseSize="128,128" />
+    <MauiImage Include="Resources\Images\*" />
+    <MauiFont Include="Resources\Fonts\*" />
+    <MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Las versiones viven en Directory.Packages.props (gestion central de paquetes). -->
+    <PackageReference Include="Microsoft.Maui.Controls" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Debug" />
+
+    <!-- IHttpClientFactory: es lo que permite encadenar el ManejadorDeToken al cliente. -->
+    <PackageReference Include="Microsoft.Extensions.Http" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      La aplicacion movil referencia UNICAMENTE los contratos: las mismas clases de
+      peticion y respuesta que usa la API. Asi, si manana cambia un campo del servidor,
+      esto deja de compilar en lugar de fallar en el movil un domingo.
+
+      Lo que NO referencia, a proposito: Aplicacion, Infraestructura ni Dominio. Arrastrarian
+      EF Core dentro del APK y pondrian logica financiera en un dispositivo que esta en
+      manos del usuario.
+    -->
+    <ProjectReference Include="..\..\Rumbo.Contratos\Rumbo.Contratos.csproj" />
+  </ItemGroup>
+
+</Project>

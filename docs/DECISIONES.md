@@ -1029,3 +1029,121 @@ de él.
 dependencias de los paquetes de Data Protection, así que la ambigüedad seguiría existiendo. El
 alias dice explícitamente de qué ensamblado se toma el tipo, que es la solución que el propio
 lenguaje ofrece para esto.
+
+
+---
+
+## D62 — La aplicación móvil queda fuera de `Rumbo.slnx`
+**Fecha:** 2026-09-24 · **Estado:** aceptada
+
+**Decisión.** `src/Movil/Rumbo.Movil` **no** se añade a la solución. Se compila con
+`dotnet build src/Movil/Rumbo.Movil`.
+
+**Por qué.** Estaba previsto desde la Fase 0: si estuviera en la solución, `dotnet build` y la
+CI del backend intentarían compilar Android, y el runner de GitHub tendría que instalar el
+workload `maui-android` en cada ejecución. Eso convierte una CI de dos minutos en una de quince,
+a cambio de nada: el backend no depende del móvil.
+
+El precio es que en Visual Studio hay que abrir el proyecto aparte. Es un precio pequeño.
+
+---
+
+## D63 — El móvil solo referencia `Rumbo.Contratos`
+**Fecha:** 2026-09-24 · **Estado:** aceptada
+
+**Decisión.** La aplicación referencia únicamente el proyecto de contratos. No referencia
+`Aplicacion`, ni `Infraestructura`, ni `Dominio`.
+
+**Por qué.** Referenciar `Aplicacion` arrastraría EF Core dentro del APK —peso y superficie de
+ataque por nada— y, peor, pondría lógica financiera en un dispositivo que está en manos del
+usuario. Con los contratos compartidos, si mañana cambia un campo del servidor la aplicación
+**deja de compilar** en lugar de fallar en el móvil un domingo por la tarde.
+
+---
+
+## D64 — El móvil no trata las advertencias como errores
+**Fecha:** 2026-09-24 · **Estado:** aceptada
+
+**Contexto.** `Directory.Build.props` activa `TreatWarningsAsErrors` y documentación XML
+obligatoria para toda la solución.
+
+**Decisión.** Ambas se desactivan **solo** para `src/Movil`. También se excluye al móvil del
+`<TargetFramework>` único, porque usa `TargetFrameworks` (en plural, `net10.0-android`).
+
+**Por qué.** El SDK de Android y los generadores de MAUI emiten advertencias que no dependen de
+nuestro código y que no podemos arreglar; bloquear la compilación por ellas no protege nada. Y
+la documentación XML obligatoria tiene sentido en el backend, donde cada tipo público es un
+contrato; en el móvil, el código lo lee una persona que está aprendiendo, y los comentarios
+explican el porqué en vez de rellenar un formulario.
+
+**El backend conserva ambas reglas intactas.** Esta excepción no las debilita.
+
+---
+
+## D65 — MVVM escrito a mano, sin `CommunityToolkit.Mvvm`
+**Fecha:** 2026-09-24 · **Estado:** aceptada
+
+**Decisión.** `ModeloVistaBase` y `ComandoSimple` se escriben a mano, unas cien líneas entre las
+dos, en lugar de usar la librería de Microsoft que las reduce a un atributo.
+
+**Por qué.** Es un requisito explícito del proyecto: el código móvil tiene que servir para
+aprender. `[ObservableProperty]` genera el código por detrás con un generador, y no se ve nada
+de lo que ocurre. Escritas a mano una vez, todo lo demás es C# normal y visible.
+
+Cuando el patrón resulte aburrido de tan sabido, migrar al toolkit es mecánico.
+
+---
+
+## D66 — La renovación del token pasa por un `DelegatingHandler` con cerrojo
+**Fecha:** 2026-09-24 · **Estado:** aceptada
+
+**Decisión.** `ManejadorDeToken` se mete entre el `HttpClient` y la red: pone el token en cada
+petición y, ante un 401, renueva **una** vez y reintenta. La renovación va protegida por un
+`SemaphoreSlim`.
+
+**Por qué el manejador.** El token de acceso dura 15 minutos. Comprobar la caducidad en cada
+servicio significaría repetir ese código en los cuarenta métodos, y el día que se olvide en uno,
+esa pantalla fallará al azar y será imposible de reproducir.
+
+**Por qué el cerrojo.** Al abrir una pantalla que hace tres llamadas simultáneas, las tres
+recibirían 401 a la vez y las tres intentarían renovar. Como el servidor **rota** el token y
+trata el reuso como robo (D-Fase 3), la segunda y la tercera invalidarían la sesión entera. El
+cerrojo hace que solo una renueve.
+
+**Por qué una sola vez.** Reintentar en bucle con un token revocado de verdad provocaría
+llamadas infinitas contra el servidor.
+
+La renovación usa un `HttpClient` **aparte**, sin este manejador: si pasara por aquí y devolviera
+401, intentaría renovarse a sí misma indefinidamente.
+
+---
+
+## D67 — Los tokens se guardan en `SecureStorage`, nunca en `Preferences`
+**Fecha:** 2026-09-24 · **Estado:** aceptada
+
+**Decisión.** `AlmacenSesion` usa `SecureStorage`, que en Android se apoya en el almacén de
+claves del sistema. Los accesos van envueltos en `try/catch`.
+
+**Por qué `SecureStorage`.** `Preferences` guarda texto plano y cualquier aplicación con acceso
+al almacenamiento podría leer el token. Es la diferencia entre guardar la llave en una caja
+fuerte o debajo del felpudo.
+
+**Por qué el `try/catch`.** El almacén de claves puede quedar en mal estado tras restaurar una
+copia de seguridad del teléfono. Tratarlo como «no hay sesión» devuelve a la persona a la
+pantalla de acceso —molesto pero recuperable—; dejar que la excepción suba haría que la
+aplicación no arrancara nunca más.
+
+---
+
+## D68 — En depuración la aplicación habla por HTTP
+**Fecha:** 2026-09-24 · **Estado:** aceptada
+
+**Decisión.** `ConfiguracionApi.DireccionBase` usa `http://10.0.2.2:5114/` en `DEBUG` y HTTPS en
+`RELEASE`.
+
+**Por qué.** El certificado de desarrollo del PC no vale para el teléfono, y pelearse con eso
+mientras se aprende no aporta nada. `10.0.2.2` es la dirección con la que el emulador de Android
+alcanza a su máquina anfitriona: para el teléfono, `localhost` es él mismo.
+
+En `RELEASE` es HTTPS obligatorio, que es lo único aceptable con datos financieros. La
+diferencia la marca el compilador, no una variable que alguien pueda olvidarse de cambiar.

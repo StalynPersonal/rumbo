@@ -486,3 +486,36 @@ aviso del mes que viene es un aviso distinto.
 
 Descartar **no borra**: saber que se avisó y que la persona lo apartó permite medir si los avisos
 sirven de algo.
+
+
+## Aplicación móvil
+
+| Ruta | Permiso | Qué hace |
+|---|---|---|
+| `GET /app/version?version=` | anónimo | Dice si la versión instalada sigue valiendo |
+| `GET /salud` | anónimo | Comprobación de vida: solo dice si el proceso responde |
+| `GET /salud/preparada` | anónimo | Además comprueba que se llega a la base de datos |
+
+`GET /app/version` es **anónimo** a propósito: la aplicación necesita preguntarlo antes de que
+nadie inicie sesión. Si la versión instalada ya no sirve, lo útil es decirlo en la pantalla de
+acceso, no después de que la persona se pelee con un error raro.
+
+Devuelve `versionMinima`, `versionRecomendada`, `urlDescarga` y dos banderas:
+`hayActualizacion` y `actualizacionObligatoria`.
+
+**El servidor no corta el acceso a las versiones antiguas.** La v1 de la API sigue funcionando
+para todas; solo avisa. Dejar a alguien sin ver sus finanzas por no haber actualizado sería peor
+que la versión vieja. Y si la aplicación no manda versión, o manda algo que no se entiende, no
+se marca nada como obligatorio: no se bloquea a ciegas.
+
+`versionMinima` solo se sube cuando una versión antigua hace algo **incorrecto**, no cada vez que
+se publica un APK. Obligar a actualizar por gusto acostumbra a la gente a ignorar el aviso, y
+entonces el día que importa de verdad nadie lo lee.
+
+### Los dos endpoints de salud
+
+Responden preguntas distintas y por eso son dos. `/salud` dice si el proceso vive, y es el que
+usa Azure como comprobación de vida; si mirara la base de datos, una caída momentánea de SQL
+haría que la plataforma reiniciara la aplicación, que no arregla nada y encima tira las sesiones.
+`/salud/preparada` sí consulta la base, y lo usa el despliegue para decidir si una instancia
+recién publicada puede recibir tráfico.

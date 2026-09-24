@@ -78,7 +78,7 @@ Swagger solo se publica en los ambientes `Development` y `Staging`.
 
 ```bash
 dotnet ef database update --project src/Rumbo.Infraestructura --startup-project src/Rumbo.Api
-dotnet test Rumbo.slnx           # 238 pruebas
+dotnet test Rumbo.slnx           # 245 pruebas
 ```
 
 ## Documentación
@@ -119,7 +119,7 @@ recomendación: `GenerateDocumentationFile` está activo y CS1591 **no** está s
 | 5 | Presupuestos, metas y recomendaciones | ✅ Completada |
 | 6 | Viajes y viabilidad | ✅ Completada |
 | 7 | Panel y reportes | ✅ Completada |
-| 8 | Aplicación .NET MAUI | ⏳ Siguiente |
+| 8 | Aplicación .NET MAUI | 🔄 En curso — base, acceso y panel funcionando |
 | 9 | Seguridad y pruebas | ✅ Completada |
 | 10 | Despliegue en Azure | ✅ Código y guía listos — falta ejecutarlo en la suscripción |
 | 11 | Generación del APK | ⬜ |

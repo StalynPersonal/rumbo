@@ -24,12 +24,12 @@ Al día de hoy (20 de septiembre de 2026):
 | 5 | Presupuestos, metas y recomendaciones | ✅ Completada |
 | 6 | Viajes y viabilidad | ✅ Completada |
 | 7 | Panel y reportes | ✅ Completada |
-| 8 | Aplicación .NET MAUI | ⬜ Pendiente — requiere `dotnet workload install maui-android` |
+| 8 | Aplicación .NET MAUI | 🔄 En curso — proyecto, clases base, acceso y panel; APK de depuración generado |
 | 9 | Seguridad y pruebas | ✅ Completada |
 | 10 | Despliegue en Azure | ✅ Completada — falta ejecutar los comandos en tu suscripción |
 | 11 | Generación del APK | ⬜ Pendiente |
 
-**Desviaciones del plan original registradas hasta ahora:** ver D1–D61 en
+**Desviaciones del plan original registradas hasta ahora:** ver D1–D68 en
 [DECISIONES.md](DECISIONES.md). Las más relevantes respecto a este documento son la adición de
 `Movimiento.CategoriaViaje` (D41), la interfaz `IDirectorioUsuarios` (D49) y el criterio de que
 un pago de deuda cuenta como gasto (D45).

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<!--
+    El Shell declara las pantallas de la aplicacion y como se llega a ellas.
+
+    Cada ShellContent tiene una Route. Navegar es indicar esa ruta:
+
+        await Shell.Current.GoToAsync("//panel");   ← ir y olvidar de donde venias
+        await Shell.Current.GoToAsync("cuentas");   ← ir, con boton Atras
+        await Shell.Current.GoToAsync("..");        ← volver
+
+    Si GoToAsync lanza una excepcion diciendo que no encuentra la ruta, es que falta
+    declararla aqui o registrarla en AppShell.xaml.cs.
+-->
+<Shell
+    x:Class="Rumbo.Movil.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vistas="clr-namespace:Rumbo.Movil.Vistas"
+    Title="Rumbo"
+    FlyoutBehavior="Disabled">
+
+    <!--
+        La pantalla de acceso no tiene menu ni barra: mientras nadie haya entrado, no hay
+        nada mas a donde ir.
+    -->
+    <ShellContent
+        Route="acceso"
+        ContentTemplate="{DataTemplate vistas:IniciarSesionPagina}"
+        Shell.FlyoutBehavior="Disabled" />
+
+    <ShellContent
+        Title="Inicio"
+        Route="panel"
+        ContentTemplate="{DataTemplate vistas:PanelPagina}" />
+
+</Shell>

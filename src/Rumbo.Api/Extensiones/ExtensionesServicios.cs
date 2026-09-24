@@ -38,6 +38,11 @@ public static class ExtensionesServicios
         // correo. Ver docs/SEGURIDAD.md.
         servicios.AgregarLimitesDePeticiones(configuracion);
 
+        // Versiones publicadas de la aplicacion movil. En configuracion para poder avisar de
+        // un APK nuevo sin volver a desplegar la API.
+        servicios.Configure<OpcionesVersionApp>(
+            configuracion.GetSection(OpcionesVersionApp.Seccion));
+
         // --- Tamano maximo del cuerpo -------------------------------------------
         // Ningun cuerpo legitimo de Rumbo llega a 256 KB: son movimientos y presupuestos,
         // no ficheros. Sin tope, una peticion enorme obliga al servidor a reservar memoria
