@@ -43,7 +43,7 @@ public partial class AppShell : Shell
 
         if (await _sesion.HaySesionGuardadaAsync())
         {
-            await GoToAsync("//panel");
+            await GoToAsync(Vistas.Rutas.Panel);
         }
     }
 

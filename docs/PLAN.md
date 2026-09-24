@@ -24,7 +24,7 @@ Al día de hoy (20 de septiembre de 2026):
 | 5 | Presupuestos, metas y recomendaciones | ✅ Completada |
 | 6 | Viajes y viabilidad | ✅ Completada |
 | 7 | Panel y reportes | ✅ Completada |
-| 8 | Aplicación .NET MAUI | 🔄 En curso — proyecto, clases base, acceso y panel; APK de depuración generado |
+| 8 | Aplicación .NET MAUI | 🔄 En curso — acceso, panel, movimientos con alta rápida y cuentas; APK generado |
 | 9 | Seguridad y pruebas | ✅ Completada |
 | 10 | Despliegue en Azure | ✅ Completada — falta ejecutar los comandos en tu suscripción |
 | 11 | Generación del APK | ⬜ Pendiente |

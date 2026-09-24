@@ -1,5 +1,6 @@
 using Rumbo.Movil.Comun;
 using Rumbo.Movil.Servicios;
+using Rumbo.Movil.Vistas;
 
 namespace Rumbo.Movil.ModelosVista;
 
@@ -88,10 +89,14 @@ public class IniciarSesionModeloVista(ServicioSesion sesion) : ModeloVistaBase
             // memoria mas tiempo del necesario.
             Clave = string.Empty;
 
-            // Shell maneja la navegacion. "//panel" con doble barra significa "ve a esa
-            // pantalla y olvida de donde venias": asi el boton Atras del telefono no
-            // devuelve a la pantalla de acceso despues de haber entrado.
-            await Shell.Current.GoToAsync("//panel");
+            // Shell maneja la navegacion. La doble barra significa "ve ahi y olvida de
+            // donde venias": asi el boton Atras del telefono no devuelve a la pantalla de
+            // acceso despues de haber entrado.
+            //
+            // La ruta lleva las DOS partes, "principal/panel", porque el panel vive dentro
+            // del TabBar que se llama "principal". Con solo "//panel", Shell no encuentra
+            // la ruta y lanza una excepcion que no explica nada.
+            await Shell.Current.GoToAsync(Rutas.Panel);
         });
     }
 }

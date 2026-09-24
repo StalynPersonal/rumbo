@@ -486,17 +486,44 @@ src/Movil/Rumbo.Movil/
     ClienteApi.cs               ← El único sitio que habla con el servidor.
     ServicioSesion.cs           ← Entrar, salir, cambiar de espacio.
     ServicioApiPanel.cs         ← Un servicio por módulo. Plano y aburrido.
+    ServicioApiFinanzas.cs      ← Cuentas, categorías y movimientos.
   ModelosVista/
     IniciarSesionModeloVista.cs ← LA PLANTILLA. Comentada línea a línea.
     PanelModeloVista.cs
+    MovimientosModeloVista.cs
+    CuentasModeloVista.cs
   Vistas/
+    Rutas.cs                    ← Las rutas de navegación, en un solo sitio.
     IniciarSesionPagina.xaml    ← LA PLANTILLA del XAML. También comentada.
     IniciarSesionPagina.xaml.cs ← Dos líneas. Siempre dos líneas.
-    PanelPagina.xaml
-    PanelPagina.xaml.cs
-  AppShell.xaml                 ← Las rutas de navegación.
+    PanelPagina.xaml / .cs
+    MovimientosPagina.xaml / .cs
+    CuentasPagina.xaml / .cs
+  AppShell.xaml                 ← Las pestañas y las rutas.
   MauiProgram.cs                ← El arranque y el registro de dependencias.
 ```
+
+### Sobre las rutas y las pestañas
+
+Las tres pantallas del día a día viven dentro de un `TabBar` llamado `principal`, así que su
+ruta completa lleva **dos partes**:
+
+```csharp
+await Shell.Current.GoToAsync("//principal/panel");   // Correcto
+await Shell.Current.GoToAsync("//panel");             // Shell no la encuentra
+```
+
+Por eso existe `Vistas/Rutas.cs`: escritas como cadenas sueltas por el código, una ruta mal
+tecleada no da error de compilación y falla al ejecutar con una excepción que no explica nada.
+
+### Dos detalles del alta rápida que no son casualidad
+
+**El formulario va arriba y siempre visible**, no escondido tras un botón «+». Registrar un
+gasto es lo que se hace varias veces al día; si cuesta tres toques llegar al formulario, la
+gente deja de registrarlo — y sin datos no hay análisis, que es todo el propósito de Rumbo.
+
+**Gasto/Ingreso es un interruptor, no una lista.** El 95 % de lo que se registra a diario es un
+gasto, y un toque de más cada vez acaba en lo mismo: que no se registre nada.
 
 ### Compilar y generar el APK
 
@@ -518,5 +545,5 @@ dotnet publish src/Movil/Rumbo.Movil -f net10.0-android -c Debug
 
 ### Lo que falta por construir
 
-Cuentas, Movimientos con alta rápida, Presupuestos, Metas, Viajes, Reportes y Ajustes. Todas
-siguen el mismo trío de la sección 2 y el mismo patrón que `IniciarSesionPagina`.
+Presupuestos, Metas, Viajes, Reportes y Ajustes. Todas siguen el mismo trío de la sección 2 y el
+mismo patrón que `IniciarSesionPagina`.

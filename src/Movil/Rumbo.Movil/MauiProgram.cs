@@ -37,6 +37,7 @@ public static class MauiProgram
         constructor.Services.AddSingleton<AlmacenSesion>();
         constructor.Services.AddSingleton<ServicioSesion>();
         constructor.Services.AddSingleton<ServicioApiPanel>();
+        constructor.Services.AddSingleton<ServicioApiFinanzas>();
         constructor.Services.AddSingleton<AppShell>();
 
         // --- Cliente HTTP ------------------------------------------------------
@@ -66,6 +67,10 @@ public static class MauiProgram
         constructor.Services.AddTransient<IniciarSesionModeloVista>();
         constructor.Services.AddTransient<PanelPagina>();
         constructor.Services.AddTransient<PanelModeloVista>();
+        constructor.Services.AddTransient<MovimientosPagina>();
+        constructor.Services.AddTransient<MovimientosModeloVista>();
+        constructor.Services.AddTransient<CuentasPagina>();
+        constructor.Services.AddTransient<CuentasModeloVista>();
 
 #if DEBUG
         constructor.Logging.AddDebug();

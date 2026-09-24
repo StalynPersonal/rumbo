@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<ContentPage
+    x:Class="Rumbo.Movil.Vistas.MovimientosPagina"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:modelos="clr-namespace:Rumbo.Movil.ModelosVista"
+    Title="Movimientos">
+
+    <Grid RowDefinitions="Auto,*" Padding="16" RowSpacing="12">
+
+        <!--
+            ALTA RAPIDA. Va ARRIBA y siempre visible, no escondida tras un boton "+".
+            Registrar un gasto es lo que se hace varias veces al dia; si cuesta tres toques
+            llegar al formulario, la gente deja de registrarlo y la aplicacion entera pierde
+            sentido: sin datos no hay analisis.
+        -->
+        <Border Grid.Row="0" Padding="12" StrokeShape="RoundRectangle 12">
+            <VerticalStackLayout Spacing="8">
+
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                    <Entry
+                        Grid.Column="0"
+                        Placeholder="Importe"
+                        Keyboard="Numeric"
+                        Text="{Binding Monto, Mode=TwoWay}" />
+
+                    <HorizontalStackLayout Grid.Column="1" Spacing="6" VerticalOptions="Center">
+                        <Label Text="{Binding TextoTipo}" VerticalOptions="Center" FontSize="13" />
+                        <Switch IsToggled="{Binding EsGasto, Mode=TwoWay}" />
+                    </HorizontalStackLayout>
+                </Grid>
+
+                <Entry Placeholder="¿En qué fue?" Text="{Binding Descripcion, Mode=TwoWay}" />
+
+                <!--
+                    Picker muestra una lista desplegable. ItemsSource son los elementos y
+                    ItemDisplayBinding dice QUE propiedad de cada elemento se enseña: sin
+                    esa linea, se veria el nombre del tipo de C# en vez del nombre de la
+                    cuenta.
+                -->
+                <Picker
+                    Title="Cuenta"
+                    ItemsSource="{Binding Cuentas}"
+                    ItemDisplayBinding="{Binding Nombre}"
+                    SelectedItem="{Binding CuentaSeleccionada, Mode=TwoWay}" />
+
+                <Picker
+                    Title="Categoría"
+                    ItemsSource="{Binding Categorias}"
+                    ItemDisplayBinding="{Binding Nombre}"
+                    SelectedItem="{Binding CategoriaSeleccionada, Mode=TwoWay}" />
+
+                <Button Text="Registrar" Command="{Binding RegistrarComando}" />
+
+                <ActivityIndicator
+                    IsVisible="{Binding EstaCargando}"
+                    IsRunning="{Binding EstaCargando}"
+                    HorizontalOptions="Center" />
+
+                <Label
+                    Text="{Binding MensajeError}"
+                    IsVisible="{Binding HayError}"
+                    TextColor="#B3261E"
+                    FontSize="13" />
+
+            </VerticalStackLayout>
+        </Border>
+
+        <CollectionView Grid.Row="1" ItemsSource="{Binding Movimientos}">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="modelos:MovimientoEnLista">
+                    <Grid Padding="4,10" ColumnDefinitions="*,Auto">
+                        <VerticalStackLayout Grid.Column="0" Spacing="2">
+                            <Label Text="{Binding Descripcion}" FontSize="15" />
+                            <Label Text="{Binding Detalle}" FontSize="12" />
+                        </VerticalStackLayout>
+
+                        <Label
+                            Grid.Column="1"
+                            Text="{Binding Monto}"
+                            FontSize="15"
+                            FontAttributes="Bold"
+                            VerticalOptions="Center" />
+                    </Grid>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+
+            <CollectionView.EmptyView>
+                <Label
+                    Text="Todavía no hay movimientos. Registra el primero arriba."
+                    HorizontalTextAlignment="Center"
+                    Margin="24" />
+            </CollectionView.EmptyView>
+        </CollectionView>
+
+    </Grid>
+
+</ContentPage>

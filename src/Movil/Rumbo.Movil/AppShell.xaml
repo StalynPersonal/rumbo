@@ -29,9 +29,27 @@
         ContentTemplate="{DataTemplate vistas:IniciarSesionPagina}"
         Shell.FlyoutBehavior="Disabled" />
 
-    <ShellContent
-        Title="Inicio"
-        Route="panel"
-        ContentTemplate="{DataTemplate vistas:PanelPagina}" />
+    <!--
+        TabBar dibuja las pestanas de abajo. Las tres pantallas del dia a dia van aqui:
+        se llega a cualquiera con un toque, sin menus ni navegacion.
+    -->
+    <TabBar Route="principal">
+
+        <ShellContent
+            Title="Inicio"
+            Route="panel"
+            ContentTemplate="{DataTemplate vistas:PanelPagina}" />
+
+        <ShellContent
+            Title="Movimientos"
+            Route="movimientos"
+            ContentTemplate="{DataTemplate vistas:MovimientosPagina}" />
+
+        <ShellContent
+            Title="Cuentas"
+            Route="cuentas"
+            ContentTemplate="{DataTemplate vistas:CuentasPagina}" />
+
+    </TabBar>
 
 </Shell>
