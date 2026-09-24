@@ -50,6 +50,11 @@
             Route="cuentas"
             ContentTemplate="{DataTemplate vistas:CuentasPagina}" />
 
+        <ShellContent
+            Title="Más"
+            Route="mas"
+            ContentTemplate="{DataTemplate vistas:MasPagina}" />
+
     </TabBar>
 
 </Shell>

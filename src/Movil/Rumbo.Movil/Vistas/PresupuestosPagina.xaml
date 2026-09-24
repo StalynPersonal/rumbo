@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<ContentPage
+    x:Class="Rumbo.Movil.Vistas.PresupuestosPagina"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:modelos="clr-namespace:Rumbo.Movil.ModelosVista"
+    Title="Presupuesto">
+
+    <RefreshView Command="{Binding CargarComando}" IsRefreshing="{Binding EstaCargando}">
+        <Grid RowDefinitions="Auto,Auto,*" Padding="16" RowSpacing="12">
+
+            <Border Grid.Row="0" Padding="16" StrokeShape="RoundRectangle 12">
+                <VerticalStackLayout Spacing="4">
+                    <Label Text="{Binding Titulo}" FontSize="18" FontAttributes="Bold" />
+                    <Label Text="{Binding Resumen}" FontSize="13" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Label
+                Grid.Row="1"
+                Text="{Binding MensajeError}"
+                IsVisible="{Binding HayError}"
+                TextColor="#B3261E" />
+
+            <CollectionView Grid.Row="2" ItemsSource="{Binding Partidas}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="modelos:PartidaEnLista">
+                        <VerticalStackLayout Padding="4,10" Spacing="4">
+                            <Label Text="{Binding Categoria}" FontSize="15" />
+
+                            <!--
+                                ProgressBar va de 0 a 1. El color lo decide el modelo de
+                                vista segun el nivel, y SIEMPRE acompana al texto: quien no
+                                distingue el rojo del verde sigue leyendo "Excedido".
+                            -->
+                            <ProgressBar Progress="{Binding Consumido}" ProgressColor="{Binding Color}" />
+
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Grid.Column="0" Text="{Binding Cifras}" FontSize="12" />
+                                <Label Grid.Column="1" Text="{Binding TextoNivel}" FontSize="12" TextColor="{Binding Color}" />
+                            </Grid>
+                        </VerticalStackLayout>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+
+                <CollectionView.EmptyView>
+                    <Label
+                        Text="No hay un presupuesto vigente para este mes."
+                        HorizontalTextAlignment="Center"
+                        Margin="24" />
+                </CollectionView.EmptyView>
+            </CollectionView>
+
+        </Grid>
+    </RefreshView>
+
+</ContentPage>

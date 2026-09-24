@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<ContentPage
+    x:Class="Rumbo.Movil.Vistas.ViajesPagina"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:modelos="clr-namespace:Rumbo.Movil.ModelosVista"
+    Title="Viajes">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="12">
+
+            <CollectionView
+                ItemsSource="{Binding Viajes}"
+                SelectionMode="Single"
+                SelectedItem="{Binding ViajeSeleccionado, Mode=TwoWay}"
+                HeightRequest="240">
+
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="modelos:ViajeEnLista">
+                        <VerticalStackLayout Padding="4,10" Spacing="4">
+                            <Label Text="{Binding Nombre}" FontSize="15" />
+                            <Label Text="{Binding Fechas}" FontSize="12" />
+                            <ProgressBar Progress="{Binding Fraccion}" />
+                            <Label Text="{Binding Presupuesto}" FontSize="12" />
+                        </VerticalStackLayout>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+
+                <CollectionView.EmptyView>
+                    <Label
+                        Text="Todavía no hay viajes planificados."
+                        HorizontalTextAlignment="Center"
+                        Margin="24" />
+                </CollectionView.EmptyView>
+            </CollectionView>
+
+            <ActivityIndicator
+                IsVisible="{Binding EstaCargando}"
+                IsRunning="{Binding EstaCargando}"
+                HorizontalOptions="Center" />
+
+            <Label
+                Text="{Binding MensajeError}"
+                IsVisible="{Binding HayError}"
+                TextColor="#B3261E" />
+
+            <!--
+                LA PREGUNTA QUE DA SENTIDO A LA APLICACION.
+
+                Se muestran TRES escenarios y no una sola cifra. Una respuesta unica se lee
+                como una promesa, y el excedente mensual de un hogar no es constante: un mes
+                hay una reparacion, otro una boda.
+            -->
+            <Border Padding="16" StrokeShape="RoundRectangle 12" IsVisible="{Binding HayViabilidad}">
+                <VerticalStackLayout Spacing="8">
+
+                    <Label Text="¿Podemos permitírnoslo?" FontSize="14" />
+
+                    <Label
+                        Text="{Binding Veredicto}"
+                        TextColor="{Binding ColorVeredicto}"
+                        FontSize="28"
+                        FontAttributes="Bold" />
+
+                    <Label Text="{Binding Explicacion}" FontSize="13" />
+                    <Label Text="{Binding AporteNecesario}" FontSize="12" />
+
+                    <Label
+                        Text="Calculado con poco historial: tómalo como estimación, no como dato."
+                        FontSize="11"
+                        TextColor="#B58900"
+                        IsVisible="{Binding ConfianzaBaja}" />
+
+                    <BoxView HeightRequest="1" Color="#DDDDDD" Margin="0,4" />
+
+                    <!--
+                        BindableLayout dibuja una fila por elemento sin necesitar un
+                        CollectionView, que dentro de un ScrollView daria problemas de
+                        altura. Para listas cortas y fijas como estos tres escenarios, es
+                        lo adecuado.
+                    -->
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Escenarios}" Spacing="6">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="modelos:EscenarioEnLista">
+                                <VerticalStackLayout>
+                                    <Label Text="{Binding Nombre}" FontSize="13" FontAttributes="Bold" />
+                                    <Label Text="{Binding Descripcion}" FontSize="12" />
+                                </VerticalStackLayout>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+
+                    <Label
+                        Text="Es una proyección para decidir: no mueve dinero ni reserva nada."
+                        FontSize="11"
+                        Margin="0,4,0,0" />
+
+                </VerticalStackLayout>
+            </Border>
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

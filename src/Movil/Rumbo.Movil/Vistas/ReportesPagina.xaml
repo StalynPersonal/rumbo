@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<ContentPage
+    x:Class="Rumbo.Movil.Vistas.ReportesPagina"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:modelos="clr-namespace:Rumbo.Movil.ModelosVista"
+    Title="Informes">
+
+    <RefreshView Command="{Binding CargarComando}" IsRefreshing="{Binding EstaCargando}">
+        <ScrollView>
+            <VerticalStackLayout Padding="16" Spacing="16">
+
+                <Label Text="{Binding Promedios}" FontSize="13" />
+
+                <Label
+                    Text="{Binding MensajeError}"
+                    IsVisible="{Binding HayError}"
+                    TextColor="#B3261E" />
+
+                <Label Text="Mes a mes" FontSize="16" FontAttributes="Bold" />
+
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding Meses}" Spacing="8">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="modelos:MesEnLista">
+                            <Grid ColumnDefinitions="*,Auto" Padding="0,4">
+                                <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                    <Label Text="{Binding Etiqueta}" FontSize="14" />
+                                    <Label Text="{Binding Cifras}" FontSize="12" />
+                                </VerticalStackLayout>
+
+                                <Label
+                                    Grid.Column="1"
+                                    Text="{Binding Balance}"
+                                    FontSize="14"
+                                    FontAttributes="Bold"
+                                    VerticalOptions="Center" />
+                            </Grid>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+
+                <Label Text="¿En qué se va el dinero?" FontSize="16" FontAttributes="Bold" Margin="0,8,0,0" />
+
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding Categorias}" Spacing="8">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="modelos:CategoriaEnLista">
+                            <VerticalStackLayout Spacing="3" Padding="0,4">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <Label Grid.Column="0" Text="{Binding Nombre}" FontSize="14" />
+                                    <Label Grid.Column="1" Text="{Binding Total}" FontSize="14" />
+                                </Grid>
+
+                                <ProgressBar Progress="{Binding Fraccion}" />
+                                <Label Text="{Binding Porcentaje}" FontSize="11" />
+                            </VerticalStackLayout>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+
+                <Label
+                    Text="Las transferencias entre tus cuentas no cuentan como gasto ni como ingreso."
+                    FontSize="11"
+                    Margin="0,8,0,0" />
+
+            </VerticalStackLayout>
+        </ScrollView>
+    </RefreshView>
+
+</ContentPage>

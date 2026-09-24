@@ -17,7 +17,6 @@ namespace Rumbo.Movil.Vistas;
 /// El ModeloVista llega por el constructor. No se crea aqui con "new": de eso se encarga el
 /// contenedor de dependencias que se configura en MauiProgram.cs.
 /// </remarks>
-/// <param name="modeloVista">Logica de esta pantalla.</param>
 public partial class IniciarSesionPagina : ContentPage
 {
     /// <summary>Crea la pantalla.</summary>

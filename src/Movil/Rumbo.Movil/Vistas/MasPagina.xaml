@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<!--
+    El menu de las pantallas que no son del dia a dia.
+
+    Las tres pestanas de abajo son lo que se usa varias veces al dia. Planificar, consultar
+    informes o cambiar ajustes se hace de vez en cuando, y meterlo todo en pestanas dejaria
+    siete iconos diminutos donde nadie acierta al primer toque.
+-->
+<ContentPage
+    x:Class="Rumbo.Movil.Vistas.MasPagina"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Más">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="12">
+
+            <Button Text="Presupuesto" Command="{Binding IrAPresupuestosComando}" />
+            <Button Text="Metas de ahorro" Command="{Binding IrAMetasComando}" />
+            <Button Text="Viajes" Command="{Binding IrAViajesComando}" />
+            <Button Text="Informes" Command="{Binding IrAReportesComando}" />
+            <Button Text="Ajustes" Command="{Binding IrAAjustesComando}" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

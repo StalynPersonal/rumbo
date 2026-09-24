@@ -25,4 +25,27 @@ public static class Rutas
 
     /// <summary>Cuentas del espacio.</summary>
     public const string Cuentas = "//principal/cuentas";
+
+    /// <summary>Menu de las pantallas secundarias.</summary>
+    public const string Mas = "//principal/mas";
+
+    /// <summary>Presupuesto del periodo vigente.</summary>
+    /// <remarks>
+    /// Las rutas de abajo NO llevan doble barra: se apilan encima de la pantalla actual y
+    /// el boton Atras del telefono devuelve al menu. Con doble barra se borraria el
+    /// historial y Atras sacaria de la aplicacion.
+    /// </remarks>
+    public const string Presupuestos = "presupuestos";
+
+    /// <summary>Metas de ahorro.</summary>
+    public const string Metas = "metas";
+
+    /// <summary>Viajes y su viabilidad.</summary>
+    public const string Viajes = "viajes";
+
+    /// <summary>Informes.</summary>
+    public const string Reportes = "reportes";
+
+    /// <summary>Ajustes de la cuenta y del hogar.</summary>
+    public const string Ajustes = "ajustes";
 }

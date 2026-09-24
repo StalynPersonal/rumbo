@@ -531,19 +531,62 @@ gasto, y un toque de más cada vez acaba en lo mismo: que no se registre nada.
 # Compilar
 dotnet build src/Movil/Rumbo.Movil
 
-# APK de depuración
-dotnet publish src/Movil/Rumbo.Movil -f net10.0-android -c Debug
+# Ejecutar en un dispositivo o emulador conectado
+dotnet build src/Movil/Rumbo.Movil -t:Run -f net10.0-android
+
+# APK instalable (Release)
+dotnet publish src/Movil/Rumbo.Movil -f net10.0-android -c Release
 
 # Queda en:
-# src/Movil/Rumbo.Movil/bin/Debug/net10.0-android/publish/com.rumbo.finanzas-Signed.apk
+# src/Movil/Rumbo.Movil/bin/Release/net10.0-android/publish/com.rumbo.finanzas-Signed.apk
 ```
+
+> **CUIDADO CON EL APK DE DEPURACIÓN. No es instalable por sí solo.**
+>
+> En Debug, Android usa *despliegue rápido*: el APK **no lleva dentro el código de la
+> aplicación**. Los ensamblados se empujan al dispositivo por separado cuando ejecutas con
+> `-t:Run`. Por eso el APK de Debug pesa lo mismo tengas tres pantallas o nueve.
+>
+> Lo puedes comprobar tú mismo: un APK es un ZIP.
+>
+> ```bash
+> python -c "import zipfile; z=zipfile.ZipFile('ruta/al.apk'); print([x for x in z.namelist() if 'Rumbo' in x])"
+> ```
+>
+> En el de Debug no aparece nada de Rumbo. En el de Release aparece
+> `lib/arm64-v8a/libaot-Rumbo.Movil.dll.so`, que es tu código ya compilado a nativo.
+>
+> Para **probar mientras desarrollas**, usa `-t:Run` con el móvil conectado. Para **pasarle el
+> APK a alguien**, usa Release.
 
 > **El proyecto NO está en `Rumbo.slnx` a propósito.** Si estuviera, `dotnet build` en la raíz y
 > la CI del backend intentarían compilar Android, y el runner tendría que instalar el workload
 > en cada ejecución: una CI de dos minutos pasaría a quince a cambio de nada. En Visual Studio
 > hay que abrir el proyecto aparte.
 
-### Lo que falta por construir
+### Las nueve pantallas
 
-Presupuestos, Metas, Viajes, Reportes y Ajustes. Todas siguen el mismo trío de la sección 2 y el
-mismo patrón que `IniciarSesionPagina`.
+| Pantalla | Dónde está | Qué hace |
+|---|---|---|
+| Acceso | — | Entrar. Es la plantilla comentada |
+| Inicio | Pestaña 1 | Todo el panel en una petición |
+| Movimientos | Pestaña 2 | Lista y **alta rápida** |
+| Cuentas | Pestaña 3 | Saldos y total en moneda base |
+| Más | Pestaña 4 | Menú de lo demás |
+| Presupuesto | Menú Más | Partidas con barra y nivel de alerta |
+| Metas | Menú Más | Progreso y **aportar** |
+| Viajes | Menú Más | **¿Podemos permitírnoslo?** con tres escenarios |
+| Informes | Menú Más | Mes a mes y en qué se va el dinero |
+| Ajustes | Menú Más | Hogar activo, versión y cerrar sesión |
+
+**Por qué cuatro pestañas y un menú.** Lo que se usa varias veces al día va en pestañas;
+planificar o consultar informes se hace de vez en cuando. Meterlo todo en pestañas dejaría
+nueve iconos diminutos donde nadie acierta al primer toque.
+
+Las pantallas del menú se abren con navegación normal (`"presupuestos"`, **sin** doble barra):
+se apilan encima y el botón Atrás del teléfono devuelve al menú. Con doble barra se borraría el
+historial y Atrás sacaría de la aplicación.
+
+Además hay que **registrarlas** en `AppShell.xaml.cs` con `Routing.RegisterRoute`. Sin ese
+registro, `GoToAsync` lanza una excepción diciendo que no encuentra la ruta, y ese error no
+explica que falta justo esa línea.

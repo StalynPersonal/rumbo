@@ -5,7 +5,6 @@ namespace Rumbo.Movil;
 /// <summary>
 /// Contenedor de las pantallas y su navegacion.
 /// </summary>
-/// <param name="sesion">Sesion activa, para saber si hay que pedir acceso.</param>
 public partial class AppShell : Shell
 {
     private readonly ServicioSesion _sesion;
@@ -17,6 +16,15 @@ public partial class AppShell : Shell
         InitializeComponent();
 
         _sesion = sesion;
+
+        // Las pantallas secundarias no son pestanas: se registran aqui para poder navegar a
+        // ellas por su nombre. Sin este registro, GoToAsync lanza una excepcion diciendo
+        // que no encuentra la ruta, y ese error no explica que falta justo esta linea.
+        Routing.RegisterRoute(Vistas.Rutas.Presupuestos, typeof(Vistas.PresupuestosPagina));
+        Routing.RegisterRoute(Vistas.Rutas.Metas, typeof(Vistas.MetasPagina));
+        Routing.RegisterRoute(Vistas.Rutas.Viajes, typeof(Vistas.ViajesPagina));
+        Routing.RegisterRoute(Vistas.Rutas.Reportes, typeof(Vistas.ReportesPagina));
+        Routing.RegisterRoute(Vistas.Rutas.Ajustes, typeof(Vistas.AjustesPagina));
     }
 
     /// <summary>Decide la primera pantalla segun haya sesion guardada o no.</summary>

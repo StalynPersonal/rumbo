@@ -1147,3 +1147,41 @@ alcanza a su máquina anfitriona: para el teléfono, `localhost` es él mismo.
 
 En `RELEASE` es HTTPS obligatorio, que es lo único aceptable con datos financieros. La
 diferencia la marca el compilador, no una variable que alguien pueda olvidarse de cambiar.
+
+---
+
+## D69 — Cuatro pestañas y un menú, no nueve pestañas
+**Fecha:** 2026-09-24 · **Estado:** aceptada
+
+**Decisión.** Las pestañas de abajo son Inicio, Movimientos, Cuentas y «Más». Presupuesto,
+Metas, Viajes, Informes y Ajustes viven dentro del menú «Más» y se abren con navegación apilada.
+
+**Por qué.** Lo que se usa varias veces al día va en pestañas; planificar o consultar informes
+se hace de vez en cuando. Nueve iconos diminutos en la barra inferior son nueve sitios donde
+nadie acierta al primer toque.
+
+Las rutas del menú se declaran **sin** doble barra, para que se apilen y el botón Atrás del
+teléfono devuelva al menú. Con doble barra se borraría el historial y Atrás sacaría de la
+aplicación. Además hay que registrarlas con `Routing.RegisterRoute`: sin ese registro,
+`GoToAsync` lanza una excepción que no explica que falta justo esa línea. Por eso las rutas
+viven en `Vistas/Rutas.cs` y no como cadenas sueltas por el código.
+
+---
+
+## D70 — El APK de depuración NO es instalable por sí solo
+**Fecha:** 2026-09-24 · **Estado:** aceptada · **Hallazgo**
+
+**Qué pasó.** Se reportó un «APK generado» tras `dotnet publish -c Debug`. Al comparar tamaños
+entre dos versiones con tres pantallas de diferencia, el archivo pesaba **exactamente** los
+mismos bytes. Al abrirlo como ZIP, no contenía ni `Rumbo.Movil.dll` ni nada del proyecto.
+
+**La causa.** En Debug, Android usa *despliegue rápido*: el APK no lleva dentro los ensamblados
+de la aplicación. Se empujan al dispositivo por separado al ejecutar con `-t:Run`.
+
+**Decisión.** El APK distribuible se genera con `-c Release`, y se **verifica por dentro** antes
+de darlo por bueno. El de Release sí contiene `lib/arm64-v8a/libaot-Rumbo.Movil.dll.so`, el
+código ya compilado a nativo: 30,4 MB frente a los 15,9 del caparazón de Debug.
+
+**Por qué queda escrito.** Es un error fácil de cometer y silencioso: el comando termina bien,
+el archivo existe y tiene un tamaño razonable. Sin abrirlo, se distribuye una aplicación que no
+arranca. Un APK es un ZIP y comprobarlo cuesta una línea.
