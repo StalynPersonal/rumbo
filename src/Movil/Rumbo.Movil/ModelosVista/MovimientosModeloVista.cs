@@ -14,11 +14,16 @@ namespace Rumbo.Movil.ModelosVista;
 /// <param name="Detalle">Cuenta, categoria y fecha.</param>
 /// <param name="Monto">Importe ya formateado y con signo.</param>
 /// <param name="EsGasto">Si es una salida de dinero. Sirve para pintarlo de otro color.</param>
+/// <param name="Movimiento">
+/// El movimiento original. Hace falta para poder editarlo o borrarlo: sin el solo tendriamos
+/// el texto ya formateado, y de ahi no se puede sacar un identificador.
+/// </param>
 public record MovimientoEnLista(
     string Descripcion,
     string Detalle,
     string Monto,
-    bool EsGasto);
+    bool EsGasto,
+    MovimientoResumen Movimiento);
 
 /// <summary>
 /// La pantalla de movimientos: los ultimos registrados y el alta rapida.
@@ -33,6 +38,10 @@ public class MovimientosModeloVista(ServicioApiFinanzas finanzas) : ModeloVistaB
     private bool _esGasto = true;
     private CuentaResumen? _cuentaSeleccionada;
     private CategoriaArbol? _categoriaSeleccionada;
+    private MovimientoEnLista? _seleccionado;
+    private string _montoEditado = string.Empty;
+    private string _descripcionEditada = string.Empty;
+    private bool _confirmandoBorrado;
 
     /// <summary>Los ultimos movimientos.</summary>
     public ObservableCollection<MovimientoEnLista> Movimientos { get; } = [];
@@ -116,8 +125,119 @@ public class MovimientosModeloVista(ServicioApiFinanzas finanzas) : ModeloVistaB
         }
     }
 
+    /// <summary>Movimiento elegido para corregir o borrar.</summary>
+    public MovimientoEnLista? Seleccionado
+    {
+        get => _seleccionado;
+        set
+        {
+            if (!Establecer(ref _seleccionado, value))
+            {
+                return;
+            }
+
+            // Al cambiar de movimiento se rellena el panel con sus datos y se cancela
+            // cualquier confirmacion pendiente: nadie quiere que un "si, borra" quede
+            // apuntando a otra fila.
+            ConfirmandoBorrado = false;
+
+            if (value is not null)
+            {
+                MontoEditado = value.Movimiento.Monto.ToString(Dinero.Cultura);
+                DescripcionEditada = value.Movimiento.Descripcion;
+            }
+
+            Avisar(nameof(HaySeleccionado));
+            Avisar(nameof(EsTraspaso));
+            Avisar(nameof(SePuedeEditar));
+            Avisar(nameof(TextoBorrar));
+            GuardarComando.Refrescar();
+        }
+    }
+
+    /// <summary>Indica si hay un movimiento elegido.</summary>
+    public bool HaySeleccionado => Seleccionado is not null;
+
+    /// <summary>Indica si el elegido es una de las dos patas de un traspaso.</summary>
+    public bool EsTraspaso => Seleccionado?.Movimiento.TransferenciaId is not null;
+
+    /// <summary>
+    /// Indica si el movimiento elegido admite correccion.
+    /// </summary>
+    /// <remarks>
+    /// Un traspaso no se corrige por una de sus patas: cambiar el importe de un lado sin el
+    /// otro dejaria dinero apareciendo de la nada. Se borra entero y se vuelve a hacer.
+    /// </remarks>
+    public bool SePuedeEditar => HaySeleccionado && !EsTraspaso;
+
+    /// <summary>Importe corregido.</summary>
+    public string MontoEditado
+    {
+        get => _montoEditado;
+        set
+        {
+            if (Establecer(ref _montoEditado, value))
+            {
+                GuardarComando.Refrescar();
+            }
+        }
+    }
+
+    /// <summary>Descripcion corregida.</summary>
+    public string DescripcionEditada
+    {
+        get => _descripcionEditada;
+        set
+        {
+            if (Establecer(ref _descripcionEditada, value))
+            {
+                GuardarComando.Refrescar();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Indica si se esta pidiendo confirmacion para borrar.
+    /// </summary>
+    /// <remarks>
+    /// Borrar en dos toques y no en uno. Un movimiento es dinero del hogar y el boton esta
+    /// justo debajo de la lista: un toque de mas por accidente no deberia poder alterar un
+    /// saldo. Se resuelve aqui, en el modelo de vista, y no con un dialogo del sistema, para
+    /// que la logica siga siendo probable sin levantar una pantalla.
+    /// </remarks>
+    public bool ConfirmandoBorrado
+    {
+        get => _confirmandoBorrado;
+        private set
+        {
+            Establecer(ref _confirmandoBorrado, value);
+            Avisar(nameof(TextoBorrar));
+        }
+    }
+
+    /// <summary>Texto del boton de borrar, segun el paso en que se este.</summary>
+    public string TextoBorrar => ConfirmandoBorrado
+        ? (EsTraspaso ? "Sí, borrar los dos asientos" : "Sí, borrar")
+        : "Borrar";
+
     /// <summary>Recarga la lista y los desplegables.</summary>
     public ComandoSimple CargarComando => _cargarComando ??= new ComandoSimple(CargarAsync);
+
+    /// <summary>Guarda la correccion del movimiento elegido.</summary>
+    public ComandoSimple GuardarComando => _guardarComando ??=
+        new ComandoSimple(GuardarAsync, PuedeGuardar);
+
+    /// <summary>Pide confirmacion y, al segundo toque, borra.</summary>
+    public ComandoSimple BorrarComando => _borrarComando ??= new ComandoSimple(BorrarAsync);
+
+    /// <summary>Cierra el panel sin tocar nada.</summary>
+    public ComandoSimple CancelarComando => _cancelarComando ??=
+        new ComandoSimple(() =>
+        {
+            Seleccionado = null;
+
+            return Task.CompletedTask;
+        });
 
     /// <summary>Registra el movimiento del formulario.</summary>
     public ComandoSimple RegistrarComando => _registrarComando ??=
@@ -125,6 +245,78 @@ public class MovimientosModeloVista(ServicioApiFinanzas finanzas) : ModeloVistaB
 
     private ComandoSimple? _cargarComando;
     private ComandoSimple? _registrarComando;
+    private ComandoSimple? _guardarComando;
+    private ComandoSimple? _borrarComando;
+    private ComandoSimple? _cancelarComando;
+
+    /// <summary>Indica si la correccion se puede guardar.</summary>
+    /// <returns><c>true</c> si hay importe y descripcion.</returns>
+    private bool PuedeGuardar() =>
+        SePuedeEditar
+        && Dinero.Leer(MontoEditado) > 0m
+        && !string.IsNullOrWhiteSpace(DescripcionEditada);
+
+    /// <summary>Guarda la correccion.</summary>
+    /// <returns>Tarea que finaliza cuando termina.</returns>
+    /// <remarks>
+    /// Solo se cambian importe, descripcion y categoria. El tipo y la cuenta no: cambiar la
+    /// cuenta significaria mover dinero de un sitio a otro, y eso es un traspaso, no una
+    /// correccion.
+    /// </remarks>
+    private async Task GuardarAsync() =>
+        await EjecutarAsync(async () =>
+        {
+            var original = Seleccionado!.Movimiento;
+
+            await finanzas.ActualizarMovimientoAsync(
+                original.Id,
+                new SolicitudActualizarMovimiento(
+                    original.CategoriaId,
+                    Dinero.Leer(MontoEditado),
+                    original.FechaMovimiento,
+                    DescripcionEditada.Trim(),
+                    original.Notas,
+                    original.MetodoPago,
+                    original.Reparto,
+                    original.PagadoPorUsuarioId,
+                    original.ViajeId));
+
+            Seleccionado = null;
+
+            await CargarAsync();
+        });
+
+    /// <summary>Pide confirmacion y, al segundo toque, borra.</summary>
+    /// <returns>Tarea que finaliza cuando termina.</returns>
+    private async Task BorrarAsync()
+    {
+        if (!ConfirmandoBorrado)
+        {
+            ConfirmandoBorrado = true;
+
+            return;
+        }
+
+        await EjecutarAsync(async () =>
+        {
+            var original = Seleccionado!.Movimiento;
+
+            if (original.TransferenciaId is { } transferenciaId)
+            {
+                // Se borra el traspaso ENTERO. Borrar una pata suelta dejaria dinero
+                // apareciendo o desapareciendo en la otra cuenta, y el servidor lo rechaza.
+                await finanzas.BorrarTransferenciaAsync(transferenciaId);
+            }
+            else
+            {
+                await finanzas.BorrarMovimientoAsync(original.Id);
+            }
+
+            Seleccionado = null;
+
+            await CargarAsync();
+        });
+    }
 
     /// <summary>Todas las categorias, sin filtrar por tipo.</summary>
     private readonly List<CategoriaArbol> _todasLasCategorias = [];
@@ -274,6 +466,7 @@ public class MovimientosModeloVista(ServicioApiFinanzas finanzas) : ModeloVistaB
             // El signo se muestra siempre, para que un ingreso y un gasto no se confundan
             // de un vistazo.
             (esGasto ? "−" : "+") + movimiento.Monto.ToString("C2", Cultura),
-            esGasto);
+            esGasto,
+            movimiento);
     }
 }

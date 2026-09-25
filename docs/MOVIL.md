@@ -525,6 +525,15 @@ gente deja de registrarlo — y sin datos no hay análisis, que es todo el prop�
 **Gasto/Ingreso es un interruptor, no una lista.** El 95 % de lo que se registra a diario es un
 gasto, y un toque de más cada vez acaba en lo mismo: que no se registre nada.
 
+**Borrar pide dos toques.** Un movimiento es dinero del hogar y el botón está justo debajo de la
+lista: un toque por accidente no debería poder alterar un saldo. El texto del botón cambia a
+«Sí, borrar» al pedir confirmación, y se resuelve en el modelo de vista en lugar de con un
+diálogo del sistema, para que la lógica siga siendo probable sin levantar una pantalla.
+
+**Un traspaso no se corrige por una de sus patas.** Cambiar el importe de un lado sin el otro
+dejaría dinero apareciendo de la nada, así que los campos se deshabilitan y se explica por qué.
+Borrarlo sí funciona: se borra el traspaso **entero**, con sus dos asientos.
+
 ### Compilar y generar el APK
 
 ```bash
@@ -570,7 +579,7 @@ dotnet publish src/Movil/Rumbo.Movil -f net10.0-android -c Release
 |---|---|---|
 | Acceso | — | Entrar. Es la plantilla comentada |
 | Inicio | Pestaña 1 | Todo el panel en una petición |
-| Movimientos | Pestaña 2 | Lista y **alta rápida** |
+| Movimientos | Pestaña 2 | Lista, **alta rápida**, corregir y borrar |
 | Cuentas | Pestaña 3 | Saldos, total en moneda base y **crear cuenta** |
 | Más | Pestaña 4 | Menú de lo demás |
 | Presupuesto | Menú Más | Partidas con barra, nivel de alerta y **añadir partida** |

@@ -348,6 +348,63 @@ _, sin_leer, _ = llamar("GET", "/api/v1/notificaciones?soloSinLeer=true", token=
 comprobar("y despues no queda ninguno sin leer", sin_leer == [])
 
 
+print("\n6d. Corregir y borrar")
+
+codigo, extra, _ = llamar("POST", "/api/v1/movimientos", {
+    "tipo": "Gasto", "cuentaId": nomina["id"], "categoriaId": categoria["id"],
+    "monto": 1000, "moneda": None, "fechaMovimiento": "2026-09-24",
+    "descripcion": "Con un error", "notas": None, "metodoPago": None,
+    "reparto": "Personal", "pagadoPorUsuarioId": None, "viajeId": None,
+}, token=token)
+
+comprobar("registra un gasto para corregirlo", codigo in (200, 201), f"(codigo {codigo})")
+
+_, antes, _ = llamar("GET", f"/api/v1/cuentas/{nomina['id']}", token=token)
+saldo_antes = antes["saldoActual"]
+
+codigo, corregido, _ = llamar("PUT", f"/api/v1/movimientos/{extra['id']}", {
+    "categoriaId": categoria["id"], "monto": 2500,
+    "fechaMovimiento": "2026-09-24", "descripcion": "Ya corregido",
+    "notas": None, "metodoPago": None, "reparto": "Personal",
+    "pagadoPorUsuarioId": None, "viajeId": None,
+}, token=token)
+
+comprobar("corrige el importe", codigo == 200, f"(codigo {codigo}) {corregido}")
+comprobar("la descripcion cambia", corregido["descripcion"] == "Ya corregido")
+
+_, tras_correccion, _ = llamar("GET", f"/api/v1/cuentas/{nomina['id']}", token=token)
+
+comprobar("el saldo se ajusta a la diferencia",
+          tras_correccion["saldoActual"] == saldo_antes - 1500,
+          f"(quedo {tras_correccion['saldoActual']}, se esperaba {saldo_antes - 1500})")
+
+codigo, _, _ = llamar("DELETE", f"/api/v1/movimientos/{extra['id']}", token=token)
+
+comprobar("borra el movimiento", codigo in (200, 204), f"(codigo {codigo})")
+
+_, tras_borrado, _ = llamar("GET", f"/api/v1/cuentas/{nomina['id']}", token=token)
+
+comprobar("el saldo vuelve a como estaba antes del gasto",
+          tras_borrado["saldoActual"] == saldo_antes + 1000,
+          f"(quedo {tras_borrado['saldoActual']}, se esperaba {saldo_antes + 1000})")
+
+# Una pata suelta de traspaso NO se puede borrar: dejaria dinero apareciendo en la otra
+# cuenta. La aplicacion movil, por eso, borra el traspaso entero.
+_, pagina_mov, _ = llamar(
+    "GET", "/api/v1/movimientos?Pagina=1&TamanoPagina=100", token=token)
+
+pata = next(m for m in pagina_mov["elementos"] if m["transferenciaId"] is not None)
+
+codigo, _, _ = llamar("DELETE", f"/api/v1/movimientos/{pata['id']}", token=token)
+
+comprobar("una pata suelta de traspaso NO se borra", codigo == 400, f"(codigo {codigo})")
+
+codigo, _, _ = llamar(
+    "DELETE", f"/api/v1/movimientos/transferencias/{pata['transferenciaId']}", token=token)
+
+comprobar("el traspaso entero SI se borra", codigo in (200, 204), f"(codigo {codigo})")
+
+
 print("\n7. Aislamiento entre espacios")
 
 correo2 = f"vecino{sufijo}@ejemplo.com"

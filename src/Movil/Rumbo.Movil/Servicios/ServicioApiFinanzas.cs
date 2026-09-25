@@ -47,6 +47,43 @@ public class ServicioApiFinanzas(ClienteApi api)
         api.ObtenerAsync<ResultadoPaginado<MovimientoResumen>>(
             $"api/v1/movimientos?Pagina={pagina}&TamanoPagina={tamano}");
 
+    /// <summary>Modifica un movimiento.</summary>
+    /// <param name="movimientoId">Movimiento que se modifica.</param>
+    /// <param name="solicitud">Datos nuevos.</param>
+    /// <returns>El movimiento actualizado.</returns>
+    /// <remarks>
+    /// El tipo y la cuenta NO se pueden cambiar: cambiar la cuenta significaria mover dinero
+    /// de un sitio a otro, y eso es otra operacion. Para corregirlo hay que borrar y volver
+    /// a registrar.
+    /// </remarks>
+    public Task<MovimientoResumen> ActualizarMovimientoAsync(
+        Guid movimientoId,
+        SolicitudActualizarMovimiento solicitud) =>
+        api.ActualizarAsync<SolicitudActualizarMovimiento, MovimientoResumen>(
+            $"api/v1/movimientos/{movimientoId}", solicitud);
+
+    /// <summary>Borra un movimiento y revierte su efecto sobre el saldo.</summary>
+    /// <param name="movimientoId">Movimiento que se borra.</param>
+    /// <returns>Tarea que finaliza cuando queda borrado.</returns>
+    /// <remarks>
+    /// El borrado es LOGICO: la fila permanece para la auditoria y deja de contar en el
+    /// saldo y en los informes. Una pata suelta de transferencia no se puede borrar por su
+    /// cuenta, porque dejaria dinero apareciendo en la otra cuenta.
+    /// </remarks>
+    public Task BorrarMovimientoAsync(Guid movimientoId) =>
+        api.BorrarAsync($"api/v1/movimientos/{movimientoId}");
+
+    /// <summary>Borra un traspaso completo y sus DOS asientos.</summary>
+    /// <param name="transferenciaId">Traspaso que se borra.</param>
+    /// <returns>Tarea que finaliza cuando queda borrado.</returns>
+    /// <remarks>
+    /// Una pata suelta no se puede borrar: dejaria dinero apareciendo o desapareciendo en la
+    /// otra cuenta. Por eso, al borrar un asiento de traspaso hay que borrar el traspaso
+    /// entero, y la aplicacion lo avisa antes.
+    /// </remarks>
+    public Task BorrarTransferenciaAsync(Guid transferenciaId) =>
+        api.BorrarAsync($"api/v1/movimientos/transferencias/{transferenciaId}");
+
     /// <summary>Registra un ingreso, un gasto o un ajuste.</summary>
     /// <param name="solicitud">Datos del movimiento.</param>
     /// <returns>El movimiento registrado.</returns>

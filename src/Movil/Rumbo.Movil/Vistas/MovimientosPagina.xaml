@@ -7,7 +7,7 @@
     xmlns:modelos="clr-namespace:Rumbo.Movil.ModelosVista"
     Title="Movimientos">
 
-    <Grid RowDefinitions="Auto,*" Padding="16" RowSpacing="12">
+    <Grid RowDefinitions="Auto,*,Auto" Padding="16" RowSpacing="12">
 
         <!--
             ALTA RAPIDA. Va ARRIBA y siempre visible, no escondida tras un boton "+".
@@ -67,7 +67,11 @@
             </VerticalStackLayout>
         </Border>
 
-        <CollectionView Grid.Row="1" ItemsSource="{Binding Movimientos}">
+        <CollectionView
+            Grid.Row="1"
+            ItemsSource="{Binding Movimientos}"
+            SelectionMode="Single"
+            SelectedItem="{Binding Seleccionado, Mode=TwoWay}">
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="modelos:MovimientoEnLista">
                     <Grid Padding="4,10" ColumnDefinitions="*,Auto">
@@ -93,6 +97,59 @@
                     Margin="24" />
             </CollectionView.EmptyView>
         </CollectionView>
+
+        <!--
+            Panel de correccion. Aparece al tocar un movimiento de la lista.
+
+            Solo deja cambiar el importe y la descripcion. El tipo y la cuenta no: cambiar la
+            cuenta significaria mover dinero de un sitio a otro, y eso es un traspaso, no una
+            correccion.
+        -->
+        <Border Grid.Row="2" Padding="12" StrokeShape="RoundRectangle 12" IsVisible="{Binding HaySeleccionado}">
+            <VerticalStackLayout Spacing="8">
+
+                <Label Text="Corregir este movimiento" FontAttributes="Bold" FontSize="14" />
+
+                <Entry
+                    Placeholder="Importe"
+                    Keyboard="Numeric"
+                    Text="{Binding MontoEditado, Mode=TwoWay}"
+                    IsEnabled="{Binding SePuedeEditar}" />
+
+                <Entry
+                    Placeholder="¿En qué fue?"
+                    Text="{Binding DescripcionEditada, Mode=TwoWay}"
+                    IsEnabled="{Binding SePuedeEditar}" />
+
+                <!--
+                    Un traspaso no se corrige por una de sus patas: cambiar el importe de un
+                    lado sin el otro dejaria dinero apareciendo de la nada.
+                -->
+                <Label
+                    Text="Esto es parte de un traspaso entre tus cuentas. No se corrige por un lado: bórralo y vuelve a hacerlo."
+                    FontSize="11"
+                    IsVisible="{Binding EsTraspaso}" />
+
+                <Button
+                    Text="Guardar cambios"
+                    Command="{Binding GuardarComando}"
+                    IsVisible="{Binding SePuedeEditar}" />
+
+                <!--
+                    Borrar pide DOS toques. Un movimiento es dinero del hogar y el boton esta
+                    justo debajo de la lista: un toque por accidente no deberia poder alterar
+                    un saldo. El texto del boton cambia al pedir confirmacion.
+                -->
+                <Button Text="{Binding TextoBorrar}" Command="{Binding BorrarComando}" />
+
+                <Label
+                    Text="Al borrarlo, el saldo de la cuenta vuelve a como estaba. El movimiento queda en el historial para la auditoría, pero deja de contar."
+                    FontSize="11" />
+
+                <Button Text="Cancelar" Command="{Binding CancelarComando}" />
+
+            </VerticalStackLayout>
+        </Border>
 
     </Grid>
 

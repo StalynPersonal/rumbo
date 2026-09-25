@@ -89,6 +89,21 @@ public class ClienteApi(HttpClient cliente)
         await VerificarAsync(respuesta);
     }
 
+    /// <summary>Borra algo en el servidor.</summary>
+    /// <param name="ruta">Ruta relativa.</param>
+    /// <returns>Tarea que finaliza cuando el servidor responde.</returns>
+    /// <remarks>
+    /// En Rumbo casi todo el borrado es LOGICO: la fila permanece en la base de datos para
+    /// la auditoria y deja de contar en saldos e informes. Un movimiento borrado no
+    /// desaparece del historial del hogar, simplemente deja de sumar.
+    /// </remarks>
+    public async Task BorrarAsync(string ruta)
+    {
+        var respuesta = await cliente.DeleteAsync(ruta);
+
+        await VerificarAsync(respuesta);
+    }
+
     /// <summary>Convierte la respuesta en el objeto esperado, o lanza un error legible.</summary>
     /// <typeparam name="T">Tipo esperado.</typeparam>
     /// <param name="respuesta">Respuesta del servidor.</param>
