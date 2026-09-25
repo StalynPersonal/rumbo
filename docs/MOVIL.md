@@ -573,9 +573,9 @@ dotnet publish src/Movil/Rumbo.Movil -f net10.0-android -c Release
 | Movimientos | Pestaña 2 | Lista y **alta rápida** |
 | Cuentas | Pestaña 3 | Saldos, total en moneda base y **crear cuenta** |
 | Más | Pestaña 4 | Menú de lo demás |
-| Presupuesto | Menú Más | Partidas con barra y nivel de alerta |
-| Metas | Menú Más | Progreso y **aportar** |
-| Viajes | Menú Más | **¿Podemos permitírnoslo?** con tres escenarios |
+| Presupuesto | Menú Más | Partidas con barra, nivel de alerta y **añadir partida** |
+| Metas | Menú Más | Progreso, **crear meta** y **aportar** |
+| Viajes | Menú Más | **Crear viaje** y **¿podemos permitírnoslo?** con tres escenarios |
 | Informes | Menú Más | Mes a mes y en qué se va el dinero |
 | Ajustes | Menú Más | Hogar activo, versión y cerrar sesión |
 

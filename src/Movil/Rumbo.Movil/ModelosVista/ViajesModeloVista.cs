@@ -33,6 +33,13 @@ public class ViajesModeloVista(ServicioApiPlanificacion planificacion) : ModeloV
 {
     private ViajeEnLista? _viajeSeleccionado;
     private ViabilidadViajeDto? _viabilidad;
+    private bool _mostrandoFormulario;
+    private string _nombreNuevo = string.Empty;
+    private string _destinoNuevo = string.Empty;
+    private string _presupuestoNuevo = string.Empty;
+    private DateTime _salida = DateTime.Today.AddMonths(6);
+    private DateTime _regreso = DateTime.Today.AddMonths(6).AddDays(7);
+    private int _viajeros = 2;
 
     /// <summary>Los viajes planificados.</summary>
     public ObservableCollection<ViajeEnLista> Viajes { get; } = [];
@@ -83,10 +90,133 @@ public class ViajesModeloVista(ServicioApiPlanificacion planificacion) : ModeloV
     /// <summary>Aviso de que la proyeccion se apoya en poco historial.</summary>
     public bool ConfianzaBaja => _viabilidad?.ConfianzaBaja ?? false;
 
+    /// <summary>Indica si el formulario de alta esta abierto.</summary>
+    public bool MostrandoFormulario
+    {
+        get => _mostrandoFormulario;
+        private set => Establecer(ref _mostrandoFormulario, value);
+    }
+
+    /// <summary>Nombre del viaje.</summary>
+    public string NombreNuevo
+    {
+        get => _nombreNuevo;
+        set
+        {
+            if (Establecer(ref _nombreNuevo, value))
+            {
+                CrearComando.Refrescar();
+            }
+        }
+    }
+
+    /// <summary>Destino.</summary>
+    public string DestinoNuevo
+    {
+        get => _destinoNuevo;
+        set => Establecer(ref _destinoNuevo, value);
+    }
+
+    /// <summary>Cuanto se piensa gastar en total.</summary>
+    /// <remarks>
+    /// Se pide UN importe y se guarda como una partida «Otros». El desglose por vuelos,
+    /// hospedaje y comida es util cuando el viaje se acerca, pero exigirlo al planificar
+    /// convertiria una idea suelta en un formulario de nueve casillas que nadie rellena.
+    /// El servidor calcula el total sumando las partidas, asi que una sola cuadra igual.
+    /// </remarks>
+    public string PresupuestoNuevo
+    {
+        get => _presupuestoNuevo;
+        set
+        {
+            if (Establecer(ref _presupuestoNuevo, value))
+            {
+                CrearComando.Refrescar();
+            }
+        }
+    }
+
+    /// <summary>Fecha de salida.</summary>
+    public DateTime Salida
+    {
+        get => _salida;
+        set
+        {
+            if (Establecer(ref _salida, value) && _regreso < value)
+            {
+                // El regreso sigue a la salida solo: dejar una fecha imposible en pantalla
+                // para que el servidor la rechace despues seria hacerle perder el tiempo a
+                // la persona.
+                Regreso = value.AddDays(7);
+            }
+        }
+    }
+
+    /// <summary>Fecha de regreso.</summary>
+    public DateTime Regreso
+    {
+        get => _regreso;
+        set => Establecer(ref _regreso, value);
+    }
+
+    /// <summary>Cuantas personas viajan.</summary>
+    public int Viajeros
+    {
+        get => _viajeros;
+        set => Establecer(ref _viajeros, value);
+    }
+
+    /// <summary>Abre o cierra el formulario de alta.</summary>
+    public ComandoSimple AlternarFormularioComando => _alternarComando ??=
+        new ComandoSimple(() =>
+        {
+            MostrandoFormulario = !MostrandoFormulario;
+
+            return Task.CompletedTask;
+        });
+
+    /// <summary>Crea el viaje del formulario.</summary>
+    public ComandoSimple CrearComando => _crearComando ??=
+        new ComandoSimple(
+            CrearAsync,
+            () => !string.IsNullOrWhiteSpace(NombreNuevo)
+                  && Dinero.Leer(PresupuestoNuevo) > 0m);
+
     /// <summary>Recarga los viajes.</summary>
     public ComandoSimple CargarComando => _cargarComando ??= new ComandoSimple(CargarAsync);
 
     private ComandoSimple? _cargarComando;
+    private ComandoSimple? _alternarComando;
+    private ComandoSimple? _crearComando;
+
+    /// <summary>Crea el viaje y recarga la lista.</summary>
+    /// <returns>Tarea que finaliza cuando termina.</returns>
+    private async Task CrearAsync() =>
+        await EjecutarAsync(async () =>
+        {
+            await planificacion.CrearViajeAsync(new SolicitudGuardarViaje(
+                NombreNuevo.Trim(),
+                string.IsNullOrWhiteSpace(DestinoNuevo) ? null : DestinoNuevo.Trim(),
+                null,
+                DateOnly.FromDateTime(Salida),
+                DateOnly.FromDateTime(Regreso),
+                null,
+                Math.Max(1, Viajeros),
+
+                // Sin meta vinculada al crearlo. El fondo de ahorro se crea aparte y se
+                // enlaza despues: son dos decisiones distintas y juntarlas obligaria a
+                // pensar en las dos a la vez.
+                null,
+
+                [new LineaViajeSolicitud("Otros", Dinero.Leer(PresupuestoNuevo), null)]));
+
+            NombreNuevo = string.Empty;
+            DestinoNuevo = string.Empty;
+            PresupuestoNuevo = string.Empty;
+            MostrandoFormulario = false;
+
+            await CargarAsync();
+        });
 
     /// <summary>Pide los viajes al servidor.</summary>
     /// <returns>Tarea que finaliza cuando termina la carga.</returns>

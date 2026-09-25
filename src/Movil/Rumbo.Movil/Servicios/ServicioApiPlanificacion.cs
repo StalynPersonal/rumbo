@@ -24,10 +24,45 @@ public class ServicioApiPlanificacion(ClienteApi api)
         api.ObtenerAsync<List<PresupuestoDetalle>>(
             $"api/v1/presupuestos?soloVigente={soloVigente.ToString().ToLowerInvariant()}");
 
+    /// <summary>Crea un presupuesto con sus partidas.</summary>
+    /// <param name="solicitud">Datos del presupuesto.</param>
+    /// <returns>El presupuesto creado.</returns>
+    public Task<PresupuestoDetalle> CrearPresupuestoAsync(
+        SolicitudGuardarPresupuesto solicitud) =>
+        api.EnviarAsync<SolicitudGuardarPresupuesto, PresupuestoDetalle>(
+            "api/v1/presupuestos", solicitud);
+
+    /// <summary>Modifica un presupuesto y sus partidas.</summary>
+    /// <param name="presupuestoId">Presupuesto que se modifica.</param>
+    /// <param name="solicitud">Datos nuevos.</param>
+    /// <returns>El presupuesto actualizado.</returns>
+    /// <remarks>
+    /// Las partidas se REEMPLAZAN en bloque, asi que hay que mandar todas, no solo la
+    /// nueva. Por eso la pantalla conserva las que ya existen y las reenvia junto con la
+    /// que se acaba de anadir.
+    /// </remarks>
+    public Task<PresupuestoDetalle> ActualizarPresupuestoAsync(
+        Guid presupuestoId,
+        SolicitudGuardarPresupuesto solicitud) =>
+        api.ActualizarAsync<SolicitudGuardarPresupuesto, PresupuestoDetalle>(
+            $"api/v1/presupuestos/{presupuestoId}", solicitud);
+
+    /// <summary>Crea un viaje con su desglose.</summary>
+    /// <param name="solicitud">Datos del viaje.</param>
+    /// <returns>El viaje creado.</returns>
+    public Task<ViajeDetalle> CrearViajeAsync(SolicitudGuardarViaje solicitud) =>
+        api.EnviarAsync<SolicitudGuardarViaje, ViajeDetalle>("api/v1/viajes", solicitud);
+
     /// <summary>Metas de ahorro con su proyeccion.</summary>
     /// <returns>Las metas activas.</returns>
     public Task<List<MetaDetalle>> ListarMetasAsync() =>
         api.ObtenerAsync<List<MetaDetalle>>("api/v1/metas");
+
+    /// <summary>Crea una meta de ahorro.</summary>
+    /// <param name="solicitud">Datos de la meta.</param>
+    /// <returns>La meta creada.</returns>
+    public Task<MetaDetalle> CrearMetaAsync(SolicitudGuardarMeta solicitud) =>
+        api.EnviarAsync<SolicitudGuardarMeta, MetaDetalle>("api/v1/metas", solicitud);
 
     /// <summary>Aporta dinero a una meta.</summary>
     /// <param name="metaId">Meta que recibe el dinero.</param>

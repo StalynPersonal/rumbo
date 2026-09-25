@@ -10,6 +10,38 @@
     <ScrollView>
         <VerticalStackLayout Padding="16" Spacing="12">
 
+            <!--
+                Formulario de alta, plegado. Solo pide lo minimo para poder responder «¿nos
+                lo podemos permitir?»: nombre, cuanto costaria y cuando. El desglose por
+                vuelos y hospedaje se afina cuando el viaje se acerca.
+            -->
+            <Border Padding="12" StrokeShape="RoundRectangle 12" IsVisible="{Binding MostrandoFormulario}">
+                <VerticalStackLayout Spacing="8">
+
+                    <Entry Placeholder="¿A dónde quieres ir?" Text="{Binding NombreNuevo, Mode=TwoWay}" />
+                    <Entry Placeholder="Destino (opcional)" Text="{Binding DestinoNuevo, Mode=TwoWay}" />
+
+                    <Entry
+                        Placeholder="¿Cuánto crees que costaría?"
+                        Keyboard="Numeric"
+                        Text="{Binding PresupuestoNuevo, Mode=TwoWay}" />
+
+                    <Label Text="Salida" FontSize="12" />
+                    <DatePicker Date="{Binding Salida, Mode=TwoWay}" />
+
+                    <Label Text="Regreso" FontSize="12" />
+                    <DatePicker Date="{Binding Regreso, Mode=TwoWay}" />
+
+                    <Entry
+                        Placeholder="¿Cuántas personas viajan?"
+                        Keyboard="Numeric"
+                        Text="{Binding Viajeros, Mode=TwoWay}" />
+
+                    <Button Text="Crear viaje" Command="{Binding CrearComando}" />
+
+                </VerticalStackLayout>
+            </Border>
+
             <CollectionView
                 ItemsSource="{Binding Viajes}"
                 SelectionMode="Single"
@@ -34,6 +66,8 @@
                         Margin="24" />
                 </CollectionView.EmptyView>
             </CollectionView>
+
+            <Button Text="Nuevo viaje" Command="{Binding AlternarFormularioComando}" />
 
             <ActivityIndicator
                 IsVisible="{Binding EstaCargando}"

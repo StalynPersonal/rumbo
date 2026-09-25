@@ -34,6 +34,13 @@ public class MetasModeloVista(
     private MetaEnLista? _metaSeleccionada;
     private CuentaResumen? _cuentaOrigen;
     private string _montoAporte = string.Empty;
+    private bool _mostrandoFormulario;
+    private string _nombreNueva = string.Empty;
+    private string _objetivoNueva = string.Empty;
+    private string _prioridadNueva = "Media";
+    private bool _conFecha;
+    private DateTime _fechaObjetivo = DateTime.Today.AddMonths(12);
+    private CuentaResumen? _cuentaVinculada;
 
     /// <summary>Las metas activas.</summary>
     public ObservableCollection<MetaEnLista> Metas { get; } = [];
@@ -84,6 +91,98 @@ public class MetasModeloVista(
         }
     }
 
+    /// <summary>Prioridades entre las que elegir.</summary>
+    public IReadOnlyList<string> Prioridades { get; } = ["Baja", "Media", "Alta", "Critica"];
+
+    /// <summary>Indica si el formulario de alta esta abierto.</summary>
+    public bool MostrandoFormulario
+    {
+        get => _mostrandoFormulario;
+        private set => Establecer(ref _mostrandoFormulario, value);
+    }
+
+    /// <summary>Nombre de la meta que se va a crear.</summary>
+    public string NombreNueva
+    {
+        get => _nombreNueva;
+        set
+        {
+            if (Establecer(ref _nombreNueva, value))
+            {
+                CrearComando.Refrescar();
+            }
+        }
+    }
+
+    /// <summary>Cuanto se quiere reunir.</summary>
+    public string ObjetivoNueva
+    {
+        get => _objetivoNueva;
+        set
+        {
+            if (Establecer(ref _objetivoNueva, value))
+            {
+                CrearComando.Refrescar();
+            }
+        }
+    }
+
+    /// <summary>Prioridad elegida.</summary>
+    public string PrioridadNueva
+    {
+        get => _prioridadNueva;
+        set => Establecer(ref _prioridadNueva, value);
+    }
+
+    /// <summary>Si la meta tiene fecha limite.</summary>
+    /// <remarks>
+    /// Es opcional a proposito. Sin fecha no hay ritmo que calcular, y el servidor lo dice
+    /// asi en vez de inventarse una urgencia que nadie ha pedido. Un fondo de emergencia no
+    /// tiene plazo; un viaje si.
+    /// </remarks>
+    public bool ConFecha
+    {
+        get => _conFecha;
+        set => Establecer(ref _conFecha, value);
+    }
+
+    /// <summary>Fecha limite, si la tiene.</summary>
+    public DateTime FechaObjetivo
+    {
+        get => _fechaObjetivo;
+        set => Establecer(ref _fechaObjetivo, value);
+    }
+
+    /// <summary>Cuenta de ahorro donde se acumulara.</summary>
+    /// <remarks>
+    /// El servidor la exige para poder aportar: sin cuenta, el acumulado subiria sin que
+    /// ningun saldo bajara y el hogar creeria tener ese dinero dos veces.
+    /// </remarks>
+    public CuentaResumen? CuentaVinculada
+    {
+        get => _cuentaVinculada;
+        set
+        {
+            if (Establecer(ref _cuentaVinculada, value))
+            {
+                CrearComando.Refrescar();
+            }
+        }
+    }
+
+    /// <summary>Abre o cierra el formulario de alta.</summary>
+    public ComandoSimple AlternarFormularioComando => _alternarComando ??=
+        new ComandoSimple(() =>
+        {
+            MostrandoFormulario = !MostrandoFormulario;
+
+            return Task.CompletedTask;
+        });
+
+    /// <summary>Crea la meta del formulario.</summary>
+    public ComandoSimple CrearComando => _crearComando ??=
+        new ComandoSimple(CrearAsync, PuedeCrear);
+
     /// <summary>Recarga las metas.</summary>
     public ComandoSimple CargarComando => _cargarComando ??= new ComandoSimple(CargarAsync);
 
@@ -93,6 +192,38 @@ public class MetasModeloVista(
 
     private ComandoSimple? _cargarComando;
     private ComandoSimple? _aportarComando;
+    private ComandoSimple? _alternarComando;
+    private ComandoSimple? _crearComando;
+
+    /// <summary>Indica si ya se puede crear la meta.</summary>
+    /// <returns><c>true</c> si el formulario esta completo.</returns>
+    private bool PuedeCrear() =>
+        !string.IsNullOrWhiteSpace(NombreNueva)
+        && Dinero.Leer(ObjetivoNueva) > 0m
+        && CuentaVinculada is not null;
+
+    /// <summary>Crea la meta y recarga la lista.</summary>
+    /// <returns>Tarea que finaliza cuando termina.</returns>
+    private async Task CrearAsync() =>
+        await EjecutarAsync(async () =>
+        {
+            await planificacion.CrearMetaAsync(new SolicitudGuardarMeta(
+                NombreNueva.Trim(),
+                null,
+                Dinero.Leer(ObjetivoNueva),
+                null,
+                ConFecha ? DateOnly.FromDateTime(FechaObjetivo) : null,
+                PrioridadNueva,
+                null,
+                CuentaVinculada!.Id,
+                null));
+
+            NombreNueva = string.Empty;
+            ObjetivoNueva = string.Empty;
+            MostrandoFormulario = false;
+
+            await CargarAsync();
+        });
 
     /// <summary>Pide las metas y las cuentas al servidor.</summary>
     /// <returns>Tarea que finaliza cuando termina la carga.</returns>
@@ -116,6 +247,12 @@ public class MetasModeloVista(
                 }
 
                 CuentaOrigen = Cuentas.FirstOrDefault();
+
+                // Para vincular se propone una cuenta de AHORRO, que es donde tiene sentido
+                // acumular. Si no hay ninguna, vale cualquiera: mejor poder crear la meta y
+                // corregir la cuenta despues que quedarse bloqueado.
+                CuentaVinculada = Cuentas.FirstOrDefault(c => c.Tipo == "Ahorro")
+                                  ?? Cuentas.FirstOrDefault();
             }
         });
 

@@ -7,10 +7,51 @@
     xmlns:modelos="clr-namespace:Rumbo.Movil.ModelosVista"
     Title="Metas">
 
-    <Grid RowDefinitions="*,Auto" Padding="16" RowSpacing="12">
+    <Grid RowDefinitions="Auto,*,Auto,Auto" Padding="16" RowSpacing="12">
+
+        <!--
+            Formulario de alta, plegado por defecto. Crear una meta se hace de vez en
+            cuando; consultarla y aportar, mucho mas a menudo.
+        -->
+        <Border Grid.Row="0" Padding="12" StrokeShape="RoundRectangle 12" IsVisible="{Binding MostrandoFormulario}">
+            <VerticalStackLayout Spacing="8">
+
+                <Entry Placeholder="¿Para qué ahorras?" Text="{Binding NombreNueva, Mode=TwoWay}" />
+
+                <Entry
+                    Placeholder="¿Cuánto quieres reunir?"
+                    Keyboard="Numeric"
+                    Text="{Binding ObjetivoNueva, Mode=TwoWay}" />
+
+                <Picker
+                    Title="Prioridad"
+                    ItemsSource="{Binding Prioridades}"
+                    SelectedItem="{Binding PrioridadNueva, Mode=TwoWay}" />
+
+                <Picker
+                    Title="¿En qué cuenta se acumula?"
+                    ItemsSource="{Binding Cuentas}"
+                    ItemDisplayBinding="{Binding Nombre}"
+                    SelectedItem="{Binding CuentaVinculada, Mode=TwoWay}" />
+
+                <!--
+                    La fecha es OPCIONAL. Sin ella no hay ritmo que calcular, y eso es
+                    correcto: un fondo de emergencia no tiene plazo, un viaje si.
+                -->
+                <HorizontalStackLayout Spacing="8">
+                    <Switch IsToggled="{Binding ConFecha, Mode=TwoWay}" />
+                    <Label Text="Tiene fecha límite" VerticalOptions="Center" FontSize="13" />
+                </HorizontalStackLayout>
+
+                <DatePicker Date="{Binding FechaObjetivo, Mode=TwoWay}" IsVisible="{Binding ConFecha}" />
+
+                <Button Text="Crear meta" Command="{Binding CrearComando}" />
+
+            </VerticalStackLayout>
+        </Border>
 
         <CollectionView
-            Grid.Row="0"
+            Grid.Row="1"
             ItemsSource="{Binding Metas}"
             SelectionMode="Single"
             SelectedItem="{Binding MetaSeleccionada, Mode=TwoWay}">
@@ -55,7 +96,7 @@
             verdad, asi que exige elegir explicitamente a donde va y de donde sale: Rumbo
             nunca transfiere por su cuenta.
         -->
-        <Border Grid.Row="1" Padding="12" StrokeShape="RoundRectangle 12" IsVisible="{Binding HayMetaSeleccionada}">
+        <Border Grid.Row="2" Padding="12" StrokeShape="RoundRectangle 12" IsVisible="{Binding HayMetaSeleccionada}">
             <VerticalStackLayout Spacing="8">
 
                 <Label Text="Aportar a esta meta" FontAttributes="Bold" FontSize="14" />
@@ -90,6 +131,11 @@
 
             </VerticalStackLayout>
         </Border>
+
+        <Button
+            Grid.Row="3"
+            Text="Nueva meta"
+            Command="{Binding AlternarFormularioComando}" />
 
     </Grid>
 

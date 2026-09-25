@@ -8,7 +8,7 @@
     Title="Presupuesto">
 
     <RefreshView Command="{Binding CargarComando}" IsRefreshing="{Binding EstaCargando}">
-        <Grid RowDefinitions="Auto,Auto,*" Padding="16" RowSpacing="12">
+        <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" Padding="16" RowSpacing="12">
 
             <Border Grid.Row="0" Padding="16" StrokeShape="RoundRectangle 12">
                 <VerticalStackLayout Spacing="4">
@@ -23,7 +23,36 @@
                 IsVisible="{Binding HayError}"
                 TextColor="#B3261E" />
 
-            <CollectionView Grid.Row="2" ItemsSource="{Binding Partidas}">
+            <!--
+                Anadir una partida crea el presupuesto del mes si todavia no existe. Son un
+                solo boton a proposito: pedir primero «crear presupuesto» y luego «anadir
+                partida» serian dos pasos para algo que la persona vive como uno.
+            -->
+            <Border Grid.Row="2" Padding="12" StrokeShape="RoundRectangle 12" IsVisible="{Binding MostrandoFormulario}">
+                <VerticalStackLayout Spacing="8">
+
+                    <Picker
+                        Title="Categoría"
+                        ItemsSource="{Binding Categorias}"
+                        ItemDisplayBinding="{Binding Nombre}"
+                        SelectedItem="{Binding CategoriaNueva, Mode=TwoWay}" />
+
+                    <Entry
+                        Placeholder="¿Cuánto quieres gastar como máximo?"
+                        Keyboard="Numeric"
+                        Text="{Binding MontoNueva, Mode=TwoWay}" />
+
+                    <Button Text="Añadir partida" Command="{Binding AnadirPartidaComando}" />
+
+                    <ActivityIndicator
+                        IsVisible="{Binding EstaCargando}"
+                        IsRunning="{Binding EstaCargando}"
+                        HorizontalOptions="Center" />
+
+                </VerticalStackLayout>
+            </Border>
+
+            <CollectionView Grid.Row="3" ItemsSource="{Binding Partidas}">
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="modelos:PartidaEnLista">
                         <VerticalStackLayout Padding="4,10" Spacing="4">
@@ -51,6 +80,11 @@
                         Margin="24" />
                 </CollectionView.EmptyView>
             </CollectionView>
+
+            <Button
+                Grid.Row="4"
+                Text="Añadir partida"
+                Command="{Binding AlternarFormularioComando}" />
 
         </Grid>
     </RefreshView>

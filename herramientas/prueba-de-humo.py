@@ -77,6 +77,12 @@ codigo, sesion, _ = llamar("POST", "/api/v1/autenticacion/iniciar-sesion", {
 
 comprobar("inicia sesion", codigo == 200, f"(codigo {codigo})")
 
+if codigo == 429:
+    raise SystemExit(
+        "El limite de peticiones esta activo. Lo mas probable es que venga de la\n"
+        "propia prueba: el apartado 9 gasta el cupo de autenticacion a proposito.\n"
+        "Espera un minuto y vuelve a ejecutarla.")
+
 if codigo != 200:
     raise SystemExit("Sin sesion no se puede seguir.")
 
@@ -227,6 +233,66 @@ comprobar("trae el mes en curso", panel["mesEnCurso"] is not None)
 comprobar("trae las secciones vacias, no ausentes", panel["metas"] == [])
 
 
+print("\n6b. Planificar: lo que la aplicacion movil puede crear")
+
+codigo, meta, _ = llamar("POST", "/api/v1/metas", {
+    "nombre": "Fondo de emergencia", "descripcion": None, "montoObjetivo": 100000,
+    "moneda": None, "fechaObjetivo": None, "prioridad": "Critica",
+    "aporteMensualMinimo": None, "cuentaVinculadaId": ahorro["id"], "icono": None,
+}, token=token)
+
+comprobar("crea una meta", codigo in (200, 201), f"(codigo {codigo}) {meta}")
+
+codigo, tras_aporte, _ = llamar("POST", f"/api/v1/metas/{meta['id']}/aportes", {
+    "cuentaOrigenId": nomina["id"], "monto": 4000, "fecha": "2026-09-24",
+    "descripcion": None, "origenRecomendacion": False,
+}, token=token)
+
+comprobar("aporta a la meta", codigo in (200, 201), f"(codigo {codigo})")
+# El fondo de la meta cuenta SOLO sus aportes. La transferencia suelta de antes movio
+# dinero a la misma cuenta de ahorro, pero no iba etiquetada con la meta, asi que no suma:
+# el saldo de una cuenta y lo reunido para una meta son dos cosas distintas.
+comprobar("el fondo cuenta solo los aportes a la meta", tras_aporte["montoActual"] == 4000,
+          f"(quedo {tras_aporte['montoActual']}, se esperaba 4000)")
+
+_, resumen_tras, _ = llamar(
+    "GET", "/api/v1/reportes/resumen?Desde=2026-09-01&Hasta=2026-09-30", token=token)
+
+comprobar("el aporte NO cuenta como gasto", resumen_tras["totalGastos"] == 5500,
+          f"(conto {resumen_tras['totalGastos']}, se esperaba 5500)")
+
+_, arbol_gasto, _ = llamar("GET", "/api/v1/categorias", token=token)
+gasto_padre = next(c for c in arbol_gasto if c["tipo"] == "Gasto" and c["subcategorias"])
+cat_presu = gasto_padre["subcategorias"][0]
+
+codigo, presupuesto, _ = llamar("POST", "/api/v1/presupuestos", {
+    "nombre": "Presupuesto de prueba", "tipoPeriodo": "Mensual",
+    "inicioPeriodo": "2026-09-01", "finPeriodo": "2026-09-30",
+    "moneda": None, "notas": None,
+    "lineas": [{"categoriaId": cat_presu["id"], "montoAsignado": 8000,
+                "umbralAviso": None, "umbralCritico": None, "umbralExcedido": None}],
+}, token=token)
+
+comprobar("crea un presupuesto", codigo in (200, 201), f"(codigo {codigo}) {presupuesto}")
+
+codigo, viaje, _ = llamar("POST", "/api/v1/viajes", {
+    "nombre": "Viaje de prueba", "destino": "Cartagena", "descripcion": None,
+    "fechaInicio": "2027-06-10", "fechaFin": "2027-06-20", "moneda": None,
+    "numeroViajeros": 2, "metaId": None,
+    "lineas": [{"categoria": "Otros", "montoPlanificado": 120000, "notas": None}],
+}, token=token)
+
+comprobar("crea un viaje", codigo in (200, 201), f"(codigo {codigo}) {viaje}")
+comprobar("el total sale de las partidas", viaje["presupuestoTotal"] == 120000)
+
+codigo, viabilidad, _ = llamar(
+    "GET", f"/api/v1/viajes/{viaje['id']}/viabilidad", token=token)
+
+comprobar("responde si el viaje es viable", codigo == 200)
+comprobar("con tres escenarios", len(viabilidad["escenarios"]) == 3)
+comprobar("y un veredicto", viabilidad["veredicto"] in ("Si", "Ajustado", "No"))
+
+
 print("\n7. Aislamiento entre espacios")
 
 correo2 = f"vecino{sufijo}@ejemplo.com"
@@ -279,6 +345,9 @@ codigo, _, _ = llamar("GET", "/swagger/index.html")
 comprobar("swagger existe en desarrollo", codigo == 200, f"(codigo {codigo})")
 
 
+# OJO: este apartado gasta el cupo de autenticacion a proposito. Si la prueba se
+# ejecuta dos veces seguidas, la segunda empezara con un 429 al iniciar sesion. No es
+# un fallo: es el limitador haciendo su trabajo. Espera un minuto.
 print("\n9. Limite de peticiones")
 
 vistos = []
