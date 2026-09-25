@@ -107,6 +107,34 @@ recomendación: `GenerateDocumentationFile` está activo y CS1591 **no** está s
 `TreatWarningsAsErrors` un miembro público sin documentar **no compila**. Los proyectos de
 `pruebas/` quedan exentos, porque el nombre de cada `[Fact]` ya dice lo que verifica.
 
+## Prueba de humo
+
+Las pruebas automáticas usan `WebApplicationFactory`, que levanta la aplicación **en memoria**.
+Eso comprueba mucho, pero no que el proceso real arranque con su configuración real y hable con
+su base de datos real.
+
+Para eso está `herramientas/prueba-de-humo.py`, que recorre el flujo completo por HTTP:
+
+```bash
+# En una terminal
+dotnet run --project src/Rumbo.Api --urls "http://localhost:5199"
+
+# En otra
+python herramientas/prueba-de-humo.py
+```
+
+Comprueba 33 cosas, entre ellas las que más duelen si se rompen: que el administrador de
+plataforma **no** puede ver datos financieros, que un código de invitación no sirve dos veces,
+que una transferencia **no** cuenta como gasto en los informes, que una cuenta de otro hogar
+responde **404 y no 403**, y que los intentos de acceso en serie acaban en 429.
+
+Acepta una dirección distinta como argumento, así que también sirve para verificar un
+despliegue:
+
+```bash
+python herramientas/prueba-de-humo.py https://rumbo-api.azurewebsites.net
+```
+
 ## Estado del proyecto
 
 | Fase | Contenido | Estado |
