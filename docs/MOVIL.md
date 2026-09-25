@@ -571,7 +571,7 @@ dotnet publish src/Movil/Rumbo.Movil -f net10.0-android -c Release
 | Acceso | — | Entrar. Es la plantilla comentada |
 | Inicio | Pestaña 1 | Todo el panel en una petición |
 | Movimientos | Pestaña 2 | Lista y **alta rápida** |
-| Cuentas | Pestaña 3 | Saldos y total en moneda base |
+| Cuentas | Pestaña 3 | Saldos, total en moneda base y **crear cuenta** |
 | Más | Pestaña 4 | Menú de lo demás |
 | Presupuesto | Menú Más | Partidas con barra y nivel de alerta |
 | Metas | Menú Más | Progreso y **aportar** |

@@ -21,6 +21,17 @@ public class ServicioApiFinanzas(ClienteApi api)
     public Task<List<CuentaResumen>> ListarCuentasAsync() =>
         api.ObtenerAsync<List<CuentaResumen>>("api/v1/cuentas");
 
+    /// <summary>Crea una cuenta.</summary>
+    /// <param name="solicitud">Datos de la cuenta.</param>
+    /// <returns>La cuenta creada.</returns>
+    /// <remarks>
+    /// Hace falta desde el movil: quien instala el APK y entra por primera vez no tiene
+    /// ninguna cuenta, y sin cuenta no puede registrar nada. Sin esto, la aplicacion seria
+    /// inutil hasta que alguien creara la primera cuenta por otro medio.
+    /// </remarks>
+    public Task<CuentaResumen> CrearCuentaAsync(SolicitudCrearCuenta solicitud) =>
+        api.EnviarAsync<SolicitudCrearCuenta, CuentaResumen>("api/v1/cuentas", solicitud);
+
     /// <summary>Devuelve el arbol de categorias.</summary>
     /// <returns>Las categorias de primer nivel con sus hijas.</returns>
     public Task<List<CategoriaArbol>> ListarCategoriasAsync() =>

@@ -8,7 +8,7 @@
     Title="Cuentas">
 
     <RefreshView Command="{Binding CargarComando}" IsRefreshing="{Binding EstaCargando}">
-        <Grid RowDefinitions="Auto,Auto,*" Padding="16" RowSpacing="12">
+        <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" Padding="16" RowSpacing="12">
 
             <Border Grid.Row="0" Padding="16" StrokeShape="RoundRectangle 12">
                 <VerticalStackLayout Spacing="2">
@@ -24,6 +24,39 @@
                 TextColor="#B3261E" />
 
             <!--
+                Formulario de alta. Hace falta en el movil: quien instala el APK y entra por
+                primera vez no tiene ninguna cuenta, y sin cuenta no puede registrar nada.
+                Sin esto, la aplicacion seria inutil recien instalada.
+
+                Va plegado por defecto porque crear una cuenta se hace tres veces en la vida,
+                a diferencia de registrar un gasto.
+            -->
+            <Border Grid.Row="2" Padding="12" StrokeShape="RoundRectangle 12" IsVisible="{Binding MostrandoFormulario}">
+                <VerticalStackLayout Spacing="8">
+
+                    <Entry Placeholder="Nombre de la cuenta" Text="{Binding NombreNueva, Mode=TwoWay}" />
+
+                    <Entry
+                        Placeholder="Saldo actual (opcional)"
+                        Keyboard="Numeric"
+                        Text="{Binding SaldoInicial, Mode=TwoWay}" />
+
+                    <Picker
+                        Title="Tipo"
+                        ItemsSource="{Binding TiposDeCuenta}"
+                        SelectedItem="{Binding TipoNueva, Mode=TwoWay}" />
+
+                    <Button Text="Crear cuenta" Command="{Binding CrearComando}" />
+
+                    <ActivityIndicator
+                        IsVisible="{Binding EstaCargando}"
+                        IsRunning="{Binding EstaCargando}"
+                        HorizontalOptions="Center" />
+
+                </VerticalStackLayout>
+            </Border>
+
+            <!--
                 CollectionView dibuja una fila por cada elemento de la coleccion. El
                 DataTemplate dice como es cada fila, y dentro de el los {Binding} se
                 refieren al ELEMENTO, no al modelo de vista de la pantalla.
@@ -31,7 +64,7 @@
                 x:DataType le dice al compilador de que tipo es cada elemento: asi los
                 bindings se comprueban al compilar en vez de fallar en silencio.
             -->
-            <CollectionView Grid.Row="2" ItemsSource="{Binding Cuentas}">
+            <CollectionView Grid.Row="3" ItemsSource="{Binding Cuentas}">
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="modelos:CuentaEnLista">
                         <Grid Padding="4,12" ColumnDefinitions="*,Auto">
@@ -53,11 +86,16 @@
                 <!-- Qué mostrar cuando no hay ninguna cuenta todavía. -->
                 <CollectionView.EmptyView>
                     <Label
-                        Text="Todavía no hay cuentas. Créalas desde la web o pide a quien administre el hogar que las añada."
+                        Text="Todavía no hay cuentas. Toca «Nueva cuenta» para crear la primera."
                         HorizontalTextAlignment="Center"
                         Margin="24" />
                 </CollectionView.EmptyView>
             </CollectionView>
+
+            <Button
+                Grid.Row="4"
+                Text="Nueva cuenta"
+                Command="{Binding AlternarFormularioComando}" />
 
         </Grid>
     </RefreshView>

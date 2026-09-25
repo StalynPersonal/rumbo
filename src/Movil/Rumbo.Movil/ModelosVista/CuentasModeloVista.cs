@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Globalization;
 
 using Rumbo.Contratos.Cuentas;
 using Rumbo.Movil.Comun;
@@ -26,9 +25,11 @@ public record CuentaEnLista(string Nombre, string Detalle, string Saldo);
 /// <param name="finanzas">Servicio de cuentas y movimientos.</param>
 public class CuentasModeloVista(ServicioApiFinanzas finanzas) : ModeloVistaBase
 {
-    private static readonly CultureInfo Cultura = new("es-DO");
-
     private string _total = "—";
+    private bool _mostrandoFormulario;
+    private string _nombreNueva = string.Empty;
+    private string _saldoInicial = string.Empty;
+    private string _tipoNueva = "Bancaria";
 
     /// <summary>
     /// Las cuentas que se muestran.
@@ -47,10 +48,101 @@ public class CuentasModeloVista(ServicioApiFinanzas finanzas) : ModeloVistaBase
         private set => Establecer(ref _total, value);
     }
 
+    /// <summary>Tipos de cuenta entre los que elegir.</summary>
+    /// <remarks>
+    /// Son los del enum del servidor, escritos igual. Si alguna vez dejan de coincidir, el
+    /// servidor rechaza la cuenta con un mensaje claro en vez de guardar algo raro.
+    /// </remarks>
+    public IReadOnlyList<string> TiposDeCuenta { get; } =
+        ["Bancaria", "Ahorro", "Efectivo", "TarjetaCredito", "Inversion", "Otra"];
+
+    /// <summary>Indica si el formulario de alta esta abierto.</summary>
+    public bool MostrandoFormulario
+    {
+        get => _mostrandoFormulario;
+        private set => Establecer(ref _mostrandoFormulario, value);
+    }
+
+    /// <summary>Nombre de la cuenta que se va a crear.</summary>
+    public string NombreNueva
+    {
+        get => _nombreNueva;
+        set
+        {
+            if (Establecer(ref _nombreNueva, value))
+            {
+                CrearComando.Refrescar();
+            }
+        }
+    }
+
+    /// <summary>Saldo con el que arranca la cuenta.</summary>
+    /// <remarks>
+    /// Puede quedar vacio y se toma como cero: una cuenta de ahorro recien abierta empieza
+    /// sin nada, y obligar a escribir un 0 seria un paso de mas sin motivo.
+    /// </remarks>
+    public string SaldoInicial
+    {
+        get => _saldoInicial;
+        set => Establecer(ref _saldoInicial, value);
+    }
+
+    /// <summary>Tipo elegido.</summary>
+    public string TipoNueva
+    {
+        get => _tipoNueva;
+        set => Establecer(ref _tipoNueva, value);
+    }
+
     /// <summary>Recarga las cuentas.</summary>
     public ComandoSimple CargarComando => _cargarComando ??= new ComandoSimple(CargarAsync);
 
+    /// <summary>Abre o cierra el formulario de alta.</summary>
+    public ComandoSimple AlternarFormularioComando => _alternarComando ??=
+        new ComandoSimple(() =>
+        {
+            MostrandoFormulario = !MostrandoFormulario;
+
+            return Task.CompletedTask;
+        });
+
+    /// <summary>Crea la cuenta del formulario.</summary>
+    public ComandoSimple CrearComando => _crearComando ??=
+        new ComandoSimple(CrearAsync, () => !string.IsNullOrWhiteSpace(NombreNueva));
+
     private ComandoSimple? _cargarComando;
+    private ComandoSimple? _alternarComando;
+    private ComandoSimple? _crearComando;
+
+    /// <summary>Crea la cuenta y recarga la lista.</summary>
+    /// <returns>Tarea que finaliza cuando termina.</returns>
+    private async Task CrearAsync() =>
+        await EjecutarAsync(async () =>
+        {
+            await finanzas.CrearCuentaAsync(new SolicitudCrearCuenta(
+                NombreNueva.Trim(),
+                TipoNueva,
+
+                // La moneda base del hogar. Multi-moneda existe en el servidor, pero
+                // ofrecerla aqui obligaria a explicar las tasas de cambio en una pantalla de
+                // alta rapida; quien la necesite puede cambiarla despues.
+                "DOP",
+
+                Dinero.Leer(SaldoInicial),
+                null,
+
+                // Compartida por defecto: Rumbo es para un hogar, y lo habitual es que la
+                // cuenta la vean los dos. Lo contrario sorprende mas.
+                EsCompartida: true,
+
+                null, null, null, null, null, null));
+
+            NombreNueva = string.Empty;
+            SaldoInicial = string.Empty;
+            MostrandoFormulario = false;
+
+            await CargarAsync();
+        });
 
     /// <summary>Pide las cuentas al servidor.</summary>
     /// <returns>Tarea que finaliza cuando termina la carga.</returns>
@@ -68,12 +160,12 @@ public class CuentasModeloVista(ServicioApiFinanzas finanzas) : ModeloVistaBase
                 Cuentas.Add(new CuentaEnLista(
                     cuenta.Nombre,
                     Describir(cuenta),
-                    cuenta.SaldoActual.ToString("C2", Cultura)));
+                    Dinero.Formatear(cuenta.SaldoActual)));
             }
 
             // El total se suma en moneda BASE, no en la moneda de cada cuenta: sumar pesos
             // y dolares como si fueran lo mismo daria una cifra sin significado.
-            Total = cuentas.Sum(c => c.SaldoEnMonedaBase).ToString("C2", Cultura);
+            Total = Dinero.Formatear(cuentas.Sum(c => c.SaldoEnMonedaBase));
         });
 
     /// <summary>Arma la linea de detalle de una cuenta.</summary>

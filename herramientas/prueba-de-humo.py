@@ -150,8 +150,8 @@ print("\n4. Cuentas y movimientos")
 codigo, nomina, _ = llamar("POST", "/api/v1/cuentas", {
     "nombre": "Nomina", "tipo": "Bancaria", "moneda": "DOP", "saldoInicial": 80000,
     "propietarioUsuarioId": None, "esCompartida": True, "institucion": None,
-    "ultimosDigitos": None, "limiteCredito": None, "diaCorte": None, "diaPago": None,
-    "orden": None,
+    "ultimosDigitos": None, "notas": None, "limiteCredito": None, "diaCorte": None,
+    "diaPago": None,
 }, token=token)
 
 comprobar("crea una cuenta", codigo in (200, 201), f"(codigo {codigo}) {nomina}")
@@ -159,8 +159,8 @@ comprobar("crea una cuenta", codigo in (200, 201), f"(codigo {codigo}) {nomina}"
 codigo, ahorro, _ = llamar("POST", "/api/v1/cuentas", {
     "nombre": "Ahorro", "tipo": "Ahorro", "moneda": "DOP", "saldoInicial": 0,
     "propietarioUsuarioId": None, "esCompartida": True, "institucion": None,
-    "ultimosDigitos": None, "limiteCredito": None, "diaCorte": None, "diaPago": None,
-    "orden": None,
+    "ultimosDigitos": None, "notas": None, "limiteCredito": None, "diaCorte": None,
+    "diaPago": None,
 }, token=token)
 
 comprobar("crea la cuenta de ahorro", codigo in (200, 201))
