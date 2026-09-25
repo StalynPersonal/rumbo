@@ -33,8 +33,29 @@ public static class ConfiguracionApi
 
     /// <summary>Version de esta aplicacion, tal como la ve el servidor.</summary>
     /// <remarks>
+    /// Se lee del propio paquete instalado, que a su vez sale de ApplicationDisplayVersion
+    /// en el .csproj. NO es una constante escrita a mano a proposito: con la version en dos
+    /// sitios, tarde o temprano se publica un APK 1.2.0 que le dice al servidor que es el
+    /// 1.0.0, y el aviso de actualizacion deja de funcionar sin que nadie se entere.
+    ///
     /// Se manda a /api/v1/app/version para saber si hay una version nueva. El APK se
     /// instala a mano, sin tienda, asi que nadie avisa si no avisa la propia aplicacion.
     /// </remarks>
-    public const string VersionInstalada = "1.0.0";
+    public static string VersionInstalada
+    {
+        get
+        {
+            try
+            {
+                return AppInfo.Current.VersionString;
+            }
+            catch
+            {
+                // AppInfo necesita el contexto de Android. En una prueba o fuera del
+                // dispositivo no existe, y quedarse sin arrancar por no saber la version
+                // seria absurdo.
+                return "0.0.0";
+            }
+        }
+    }
 }

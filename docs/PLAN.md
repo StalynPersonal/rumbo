@@ -27,9 +27,9 @@ Al día de hoy (20 de septiembre de 2026):
 | 8 | Aplicación .NET MAUI | ✅ Completada — nueve pantallas y APK Release verificado |
 | 9 | Seguridad y pruebas | ✅ Completada |
 | 10 | Despliegue en Azure | ✅ Completada — falta ejecutar los comandos en tu suscripción |
-| 11 | Generación del APK | ⏳ Siguiente — falta el keystore propio |
+| 11 | Generación del APK | ✅ Completada — firma verificada de punta a punta |
 
-**Desviaciones del plan original registradas hasta ahora:** ver D1–D70 en
+**Desviaciones del plan original registradas hasta ahora:** ver D1–D72 en
 [DECISIONES.md](DECISIONES.md). Las más relevantes respecto a este documento son la adición de
 `Movimiento.CategoriaViaje` (D41), la interfaz `IDirectorioUsuarios` (D49) y el criterio de que
 un pago de deuda cuenta como gasto (D45).

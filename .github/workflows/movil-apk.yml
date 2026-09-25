@@ -1,0 +1,95 @@
+# Genera el APK firmado de Rumbo.
+#
+# Se dispara solo a mano. El APK queda como artefacto de la ejecucion, descargable durante
+# 90 dias.
+#
+# ANTES DE USARLO, piensatelo: para una aplicacion familiar, generar el APK en tu maquina es
+# mas simple y no pone el keystore en ningun servidor ajeno. Este workflow esta aqui por si
+# lo prefieres, no porque haga falta. Ver docs/APK.md.
+name: APK móvil
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versión visible, por ejemplo 1.1.0'
+        required: true
+        default: '1.0.0'
+      numero:
+        description: 'Número de compilación. TIENE que subir en cada publicación'
+        required: true
+        default: '1'
+
+permissions:
+  contents: read
+
+jobs:
+  generar:
+    name: Compilar y firmar
+    runs-on: windows-latest
+
+    steps:
+      - name: Descargar el codigo
+        uses: actions/checkout@v4
+
+      - name: Instalar el SDK de .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      # El runner no trae el workload de MAUI: hay que instalarlo en cada ejecucion. Es la
+      # razon principal por la que el proyecto movil NO esta en Rumbo.slnx, para que la CI
+      # del backend no pague este tiempo en cada push.
+      - name: Instalar el workload de MAUI para Android
+        run: dotnet workload install maui-android
+
+      - name: Recuperar el keystore
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "Falta el secreto ANDROID_KEYSTORE_BASE64. Ver docs/APK.md."
+            exit 1
+          fi
+
+          echo "$KEYSTORE_BASE64" | base64 -d > "${{ runner.temp }}/rumbo.keystore"
+
+      - name: Generar el APK firmado
+        run: >
+          dotnet publish src/Movil/Rumbo.Movil
+          -f net10.0-android
+          -c Release
+          -p:ApplicationDisplayVersion=${{ github.event.inputs.version }}
+          -p:ApplicationVersion=${{ github.event.inputs.numero }}
+          -p:RumboKeystore=${{ runner.temp }}/rumbo.keystore
+          -p:RumboKeystoreAlias=rumbo
+          -p:RumboKeystorePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+
+      # Un APK de Debug no lleva dentro el codigo de la aplicacion y se instala pero no
+      # arranca. El comando termina bien y el fichero parece correcto, asi que se comprueba
+      # aqui en vez de descubrirlo en el telefono. Ver D70 en docs/DECISIONES.md.
+      - name: Comprobar que el APK lleva el codigo dentro
+        shell: bash
+        run: |
+          ruta="src/Movil/Rumbo.Movil/bin/Release/net10.0-android/publish/com.rumbo.finanzas-Signed.apk"
+
+          python -c "
+          import sys, zipfile
+          z = zipfile.ZipFile('$ruta')
+          dentro = [n for n in z.namelist() if 'Rumbo.Movil' in n]
+          print('Encontrado:', dentro)
+          sys.exit(0 if dentro else 1)
+          "
+
+      - name: Borrar el keystore del runner
+        if: always()
+        shell: bash
+        run: rm -f "${{ runner.temp }}/rumbo.keystore"
+
+      - name: Publicar el APK como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: rumbo-${{ github.event.inputs.version }}
+          path: src/Movil/Rumbo.Movil/bin/Release/net10.0-android/publish/com.rumbo.finanzas-Signed.apk
+          retention-days: 90

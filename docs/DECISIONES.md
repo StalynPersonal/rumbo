@@ -1185,3 +1185,46 @@ código ya compilado a nativo: 30,4 MB frente a los 15,9 del caparazón de Debug
 **Por qué queda escrito.** Es un error fácil de cometer y silencioso: el comando termina bien,
 el archivo existe y tiene un tamaño razonable. Sin abrirlo, se distribuye una aplicación que no
 arranca. Un APK es un ZIP y comprobarlo cuesta una línea.
+
+---
+
+## D71 — El keystore no se versiona, y la firma se verifica siempre
+**Fecha:** 2026-09-24 · **Estado:** aceptada
+
+**Decisión.** La configuración de firma vive en `Rumbo.Movil.csproj` pero **solo se activa si
+se le pasa la ruta del keystore** por `-p:RumboKeystore=...`. Ni la ruta ni la contraseña están
+en ningún fichero del repositorio; `.gitignore` excluye `*.keystore` y `*.jks`.
+
+**Por qué así y no con un fichero de configuración.** Un `.props` con la ruta acabaría
+versionado por error algún día, y la contraseña tendría que estar en algún sitio. Con
+parámetros de línea de comandos no hay nada que se pueda filtrar por descuido: quien clona el
+repositorio compila sin tener la clave, y firma quien la tiene.
+
+**Lo que hay que entender del keystore.** Android identifica una aplicación por la firma de su
+APK. Si se pierde el keystore, **no se puede volver a actualizar esa aplicación nunca**: hay que
+crear otra con distinto identificador y pedirle a cada persona que desinstale la anterior. No
+hay recuperación. La copia de seguridad va fuera del repositorio y fuera del ordenador.
+
+---
+
+## D72 — La compilación incremental no vuelve a firmar el APK
+**Fecha:** 2026-09-24 · **Estado:** aceptada · **Hallazgo**
+
+**Qué pasó.** Con la configuración de firma ya puesta y el keystore correcto, se generó un APK
+y su certificado seguía siendo `CN=Android Debug`. El comando había terminado sin errores y el
+archivo tenía fecha nueva.
+
+**La causa.** Si ya existe un APK de una compilación anterior, el empaquetado se considera al
+día y no se rehace — ni se vuelve a firmar. Es el mismo tipo de fallo que D70: silencioso, con
+un artefacto que parece correcto.
+
+**Decisión.** Antes de generar un APK para repartir se limpian `bin` y `obj`, y **siempre** se
+verifica el resultado:
+
+```bash
+keytool -printcert -jarfile <apk>   # tiene que salir TU certificado
+python -c "import zipfile; ..."     # tiene que aparecer libaot-Rumbo.Movil.dll.so
+```
+
+Dos comprobaciones de una línea cada una. Sin ellas, lo que se reparte puede ser un APK que no
+arranca, o uno firmado con una clave que no permite actualizarlo después.

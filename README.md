@@ -122,4 +122,4 @@ recomendación: `GenerateDocumentationFile` está activo y CS1591 **no** está s
 | 8 | Aplicación .NET MAUI | ✅ Completada — nueve pantallas, APK Release verificado |
 | 9 | Seguridad y pruebas | ✅ Completada |
 | 10 | Despliegue en Azure | ✅ Código y guía listos — falta ejecutarlo en la suscripción |
-| 11 | Generación del APK | ⏳ Siguiente — falta el keystore propio |
+| 11 | Generación del APK | ✅ Completada — firma verificada; falta que crees tu keystore |

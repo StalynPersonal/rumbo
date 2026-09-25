@@ -47,6 +47,29 @@
     <SupportedOSPlatformVersion>21.0</SupportedOSPlatformVersion>
   </PropertyGroup>
 
+  <!--
+    FIRMA DEL APK (Fase 11).
+
+    Se activa SOLO en Release y SOLO si existe el fichero del keystore. Asi, quien clone el
+    repositorio puede compilar sin tener la clave, y el APK que se reparte va firmado con la
+    clave de verdad.
+
+    Ni la ruta ni la contrasena estan aqui: salen de variables de entorno. El keystore NO se
+    versiona (.gitignore lo excluye) y la contrasena no aparece en ningun fichero.
+
+    POR QUE IMPORTA TANTO: Android identifica una aplicacion por su firma. Si se pierde el
+    keystore, NO se puede publicar una actualizacion de esta aplicacion nunca mas; hay que
+    crear otra distinta y pedirle a todo el mundo que desinstale la anterior. Hazle copia de
+    seguridad y guardala en otro sitio.
+  -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release' And '$(RumboKeystore)' != '' And Exists('$(RumboKeystore)')">
+    <AndroidKeyStore>true</AndroidKeyStore>
+    <AndroidSigningKeyStore>$(RumboKeystore)</AndroidSigningKeyStore>
+    <AndroidSigningKeyAlias>$(RumboKeystoreAlias)</AndroidSigningKeyAlias>
+    <AndroidSigningKeyPass>$(RumboKeystorePassword)</AndroidSigningKeyPass>
+    <AndroidSigningStorePass>$(RumboKeystorePassword)</AndroidSigningStorePass>
+  </PropertyGroup>
+
   <ItemGroup>
     <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#0F5132" />
     <MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#0F5132" BaseSize="128,128" />
