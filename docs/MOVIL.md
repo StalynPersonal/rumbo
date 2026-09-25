@@ -564,7 +564,7 @@ dotnet publish src/Movil/Rumbo.Movil -f net10.0-android -c Release
 > en cada ejecución: una CI de dos minutos pasaría a quince a cambio de nada. En Visual Studio
 > hay que abrir el proyecto aparte.
 
-### Las nueve pantallas
+### Las once pantallas
 
 | Pantalla | Dónde está | Qué hace |
 |---|---|---|
@@ -577,6 +577,8 @@ dotnet publish src/Movil/Rumbo.Movil -f net10.0-android -c Release
 | Metas | Menú Más | Progreso, **crear meta** y **aportar** |
 | Viajes | Menú Más | **Crear viaje** y **¿podemos permitírnoslo?** con tres escenarios |
 | Informes | Menú Más | Mes a mes y en qué se va el dinero |
+| Deudas | Menú Más | Avance, **crear deuda** y **registrar pago** |
+| Avisos | Menú Más | Pagos que vencen y metas alcanzadas |
 | Ajustes | Menú Más | Hogar activo, versión y cerrar sesión |
 
 **Por qué cuatro pestañas y un menú.** Lo que se usa varias veces al día va en pestañas;

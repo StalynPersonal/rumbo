@@ -123,7 +123,7 @@ dotnet run --project src/Rumbo.Api --urls "http://localhost:5199"
 python herramientas/prueba-de-humo.py
 ```
 
-Comprueba 43 cosas, entre ellas las que más duelen si se rompen: que el administrador de
+Comprueba 53 cosas, entre ellas las que más duelen si se rompen: que el administrador de
 plataforma **no** puede ver datos financieros, que un código de invitación no sirve dos veces,
 que una transferencia **no** cuenta como gasto en los informes, que una cuenta de otro hogar
 responde **404 y no 403**, y que los intentos de acceso en serie acaban en 429.

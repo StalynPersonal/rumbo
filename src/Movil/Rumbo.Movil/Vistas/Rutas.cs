@@ -46,6 +46,12 @@ public static class Rutas
     /// <summary>Informes.</summary>
     public const string Reportes = "reportes";
 
+    /// <summary>Deudas y sus pagos.</summary>
+    public const string Deudas = "deudas";
+
+    /// <summary>Avisos del hogar.</summary>
+    public const string Notificaciones = "avisos";
+
     /// <summary>Ajustes de la cuenta y del hogar.</summary>
     public const string Ajustes = "ajustes";
 }

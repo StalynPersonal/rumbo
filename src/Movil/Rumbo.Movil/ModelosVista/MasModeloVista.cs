@@ -25,6 +25,14 @@ public class MasModeloVista : ModeloVistaBase
     public ComandoSimple IrAViajesComando { get; } =
         new(() => Shell.Current.GoToAsync(Rutas.Viajes));
 
+    /// <summary>Abre las deudas.</summary>
+    public ComandoSimple IrADeudasComando { get; } =
+        new(() => Shell.Current.GoToAsync(Rutas.Deudas));
+
+    /// <summary>Abre los avisos.</summary>
+    public ComandoSimple IrAAvisosComando { get; } =
+        new(() => Shell.Current.GoToAsync(Rutas.Notificaciones));
+
     /// <summary>Abre los informes.</summary>
     public ComandoSimple IrAReportesComando { get; } =
         new(() => Shell.Current.GoToAsync(Rutas.Reportes));

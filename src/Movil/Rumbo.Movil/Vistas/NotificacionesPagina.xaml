@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<ContentPage
+    x:Class="Rumbo.Movil.Vistas.NotificacionesPagina"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:modelos="clr-namespace:Rumbo.Movil.ModelosVista"
+    Title="Avisos">
+
+    <RefreshView Command="{Binding CargarComando}" IsRefreshing="{Binding EstaCargando}">
+        <Grid RowDefinitions="Auto,Auto,*,Auto" Padding="16" RowSpacing="12">
+
+            <Label Grid.Row="0" Text="{Binding Resumen}" FontSize="14" />
+
+            <Label
+                Grid.Row="1"
+                Text="{Binding MensajeError}"
+                IsVisible="{Binding HayError}"
+                TextColor="#B3261E" />
+
+            <CollectionView Grid.Row="2" ItemsSource="{Binding Avisos}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="modelos:AvisoEnLista">
+                        <VerticalStackLayout Padding="4,10" Spacing="3">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <!--
+                                    Lo sin leer va en negrita, no solo de otro color: quien no
+                                    distingue bien los colores tiene que poder ver igual que
+                                    hay algo nuevo.
+                                -->
+                                <Label
+                                    Grid.Column="0"
+                                    Text="{Binding Titulo}"
+                                    FontSize="15"
+                                    FontAttributes="{Binding Peso}" />
+
+                                <Label Grid.Column="1" Text="{Binding Fecha}" FontSize="11" VerticalOptions="Center" />
+                            </Grid>
+
+                            <Label Text="{Binding Cuerpo}" FontSize="13" />
+                        </VerticalStackLayout>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+
+                <CollectionView.EmptyView>
+                    <Label
+                        Text="No hay avisos. Aparecerán cuando venza un recibo o alcances una meta."
+                        HorizontalTextAlignment="Center"
+                        Margin="24" />
+                </CollectionView.EmptyView>
+            </CollectionView>
+
+            <Button
+                Grid.Row="3"
+                Text="Marcar todos como leídos"
+                Command="{Binding MarcarLeidosComando}" />
+
+        </Grid>
+    </RefreshView>
+
+</ContentPage>

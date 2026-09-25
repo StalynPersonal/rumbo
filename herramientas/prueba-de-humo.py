@@ -293,6 +293,61 @@ comprobar("con tres escenarios", len(viabilidad["escenarios"]) == 3)
 comprobar("y un veredicto", viabilidad["veredicto"] in ("Si", "Ajustado", "No"))
 
 
+print("\n6c. Deudas y avisos")
+
+codigo, deuda, _ = llamar("POST", "/api/v1/deudas", {
+    "nombre": "Prestamo del carro", "tipo": "Vehiculo", "acreedor": None,
+    "montoOriginal": 500000, "saldoActual": 300000, "moneda": None,
+    "tasaInteres": None, "pagoMinimo": None, "pagoMensual": 15000,
+    "diaVencimiento": None, "fechaInicio": "2025-01-15",
+    "cuentaVinculadaId": None, "responsableUsuarioId": None, "notas": None,
+}, token=token)
+
+comprobar("crea una deuda", codigo in (200, 201), f"(codigo {codigo}) {deuda}")
+comprobar("estima el plazo con la cuota", deuda["mesesEstimadosRestantes"] == 20,
+          f"(dijo {deuda.get('mesesEstimadosRestantes')}, se esperaba 20)")
+
+codigo, pago, _ = llamar("POST", f"/api/v1/deudas/{deuda['id']}/pagos", {
+    "cuentaOrigenId": nomina["id"], "categoriaId": cat_presu["id"],
+    "montoCapital": 12000, "montoInteres": 3000, "montoCargos": 0,
+    "fecha": "2026-09-24", "descripcion": None, "notas": None,
+}, token=token)
+
+comprobar("registra el pago", codigo in (200, 201), f"(codigo {codigo}) {pago}")
+comprobar("el total es capital + interes", pago["montoTotal"] == 15000)
+comprobar("la deuda baja SOLO el capital", pago["saldoPosterior"] == 288000,
+          f"(quedo {pago['saldoPosterior']}, se esperaba 288000)")
+
+codigo, rechazado, _ = llamar("POST", f"/api/v1/deudas/{deuda['id']}/pagos", {
+    "cuentaOrigenId": nomina["id"], "categoriaId": cat_presu["id"],
+    "montoCapital": 999999, "montoInteres": 0, "montoCargos": 0,
+    "fecha": "2026-09-24", "descripcion": None, "notas": None,
+}, token=token)
+
+comprobar("un capital mayor que la deuda se rechaza", codigo == 400, f"(codigo {codigo})")
+
+codigo, avisos, _ = llamar("POST", "/api/v1/notificaciones/generar", {}, token=token)
+
+comprobar("genera los avisos", codigo == 200, f"(codigo {codigo}) {avisos}")
+
+codigo, segunda, _ = llamar("POST", "/api/v1/notificaciones/generar", {}, token=token)
+
+comprobar("generar dos veces NO duplica", segunda["generadas"] == 0,
+          f"(genero {segunda['generadas']} la segunda vez)")
+
+codigo, lista_avisos, _ = llamar("GET", "/api/v1/notificaciones", token=token)
+
+comprobar("se pueden listar", codigo == 200)
+
+codigo, _, _ = llamar("PUT", "/api/v1/notificaciones/leidas", {}, token=token)
+
+comprobar("se marcan como leidos", codigo == 200, f"(codigo {codigo})")
+
+_, sin_leer, _ = llamar("GET", "/api/v1/notificaciones?soloSinLeer=true", token=token)
+
+comprobar("y despues no queda ninguno sin leer", sin_leer == [])
+
+
 print("\n7. Aislamiento entre espacios")
 
 correo2 = f"vecino{sufijo}@ejemplo.com"

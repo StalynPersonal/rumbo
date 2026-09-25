@@ -24,6 +24,8 @@ public partial class AppShell : Shell
         Routing.RegisterRoute(Vistas.Rutas.Metas, typeof(Vistas.MetasPagina));
         Routing.RegisterRoute(Vistas.Rutas.Viajes, typeof(Vistas.ViajesPagina));
         Routing.RegisterRoute(Vistas.Rutas.Reportes, typeof(Vistas.ReportesPagina));
+        Routing.RegisterRoute(Vistas.Rutas.Deudas, typeof(Vistas.DeudasPagina));
+        Routing.RegisterRoute(Vistas.Rutas.Notificaciones, typeof(Vistas.NotificacionesPagina));
         Routing.RegisterRoute(Vistas.Rutas.Ajustes, typeof(Vistas.AjustesPagina));
     }
 

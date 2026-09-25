@@ -19,6 +19,8 @@
             <Button Text="Presupuesto" Command="{Binding IrAPresupuestosComando}" />
             <Button Text="Metas de ahorro" Command="{Binding IrAMetasComando}" />
             <Button Text="Viajes" Command="{Binding IrAViajesComando}" />
+            <Button Text="Deudas" Command="{Binding IrADeudasComando}" />
+            <Button Text="Avisos" Command="{Binding IrAAvisosComando}" />
             <Button Text="Informes" Command="{Binding IrAReportesComando}" />
             <Button Text="Ajustes" Command="{Binding IrAAjustesComando}" />
 
